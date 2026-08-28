@@ -46,6 +46,10 @@ The Playwright configuration builds the static site and serves it on `127.0.0.1:
 - `src/components/world/world-state.ts` — playable experience/window reducer.
 - `src/components/world/WorldExplorer.tsx` — DOM shell, orbit input, travel timing, history, focus, fallback.
 - `src/components/world/WorldScene.tsx` — R3F sculpture, traveler, projection, reactions, dusk.
+- `src/components/world/world-materials.tsx` — day/night palettes, `AnimatedLambert`, `useNightMix`, tower window colours.
+- `src/components/world/tower-designs.ts` — static tower part layouts and merged window geometry.
+- `src/components/world/tower-modules.tsx` — four zone landmark archetypes.
+- `src/components/world/use-ambient-tick.ts` — shared 50ms demand tick for carousel spin and tower idle motion.
 - `src/components/world/ArchiveWindow.tsx` — accessible zone/index/preview window.
 - `src/components/world/world.css` — responsive labels, controls, desktop window, mobile sheet, motion.
 - `src/pages/index.astro` — collection-to-zone data and homepage island.
@@ -73,19 +77,48 @@ The repository was initialized without a base commit; the current branch is `cod
 
 ## Current handoff status
 
-Tower window lamplight pass complete (2026-08-27). Verification:
+Impossible-mechanisms tower redesign complete (2026-08-28). The four landmarks are now the Work Gearhouse, Field Notes Pagewell, Experiments Paradox Gate, and About Orrery Beacon. Verification from this pass:
 
-- `npm test -- --run` — 50 passed
-- `npm run check` — 0 errors
-- `npm run build` — succeeded (budget check included)
-- `npx playwright test --workers=3` — 59 passed, 2 skipped
-- `public/world-poster.png` regenerated; all Playwright visual baselines refreshed
+- `npm test -- --run` — 69 passed
+- `npm run check` — 0 errors, warnings, or hints
+- `npm run build` — succeeded; WorldCanvas 242,735 gzip bytes of 307,200
+- Playwright visual/dependency run at three workers — 63 passed, 10 skipped
+- Impeccable detector — no findings
+- `public/world-poster.png` regenerated; responsive, night, fallback, active-tower, and orbit baselines refreshed
 
 Shipped in this pass:
 
+- Four narrative silhouettes: short/dense Gearhouse, tall/hollow Pagewell, wide/porous Paradox Gate, and slender/celestial Orrery Beacon
+- Reversible shared tower state: 1.05s arrival, 0.65s exit, replay on reselection, immediate reduced-motion final poses
+- Held active forms: turned workshop and aligned stair, fanned folios, 0°/45°/90° portal with locked cube, aligned halo with inward beam
+- Authored four-face window placements, merged static materials, instanced Pagewell folios and Paradox frames
+- Archetype-specific scene-budget accounting replaces the old generic six-call-per-tower estimate; the authored scene stays under 100 draw calls and 75k triangles
+- Dedicated desktop reduced-motion baselines for all four active landmark poses
+
+The previous Monument Valley tower redesign completed on 2026-08-27 with this verification:
+
+- `npm test -- --run` — 56 passed
+- `npm run check` — 0 errors
+- `npm run build` — succeeded (budget check included)
+- `npx playwright test --workers=3` — 59 passed, 2 skipped
+- `public/world-poster.png` regenerated; Playwright visual baselines refreshed
+
+Shipped in this pass:
+
+- Four distinct zone tower archetypes: work keep, notes archive spire, experiments gate, about armillary lighthouse
+- Each tower keeps four-face warm window slits, coral crown, visit reaction, and slow ambient life on a shared 50ms `AmbientMotionDriver` tick
+- Tower code split into `tower-designs.ts`, `tower-modules.tsx`, and `world-materials.tsx`; carousel no longer runs its own interval
+- Reaction kinds renamed: `page-riffle`, `gate-slot`, `lantern-rings`
+- Motion helpers unit-tested: `keepCrankTurn`, `pageRiffleYaw`, `gateBlockPose`, `lanternRingSpin`
+
+Shipped in the night lamplight pass:
+
 - Tower windows use their own warm pair (`TOWER_WINDOW`) instead of the sun/moon tones, so night reads as lit yellow lamplight
 - Window slits are authored on all four tower faces, still one merged mesh and one draw call per tower
-- Window brightness comes from the tested `towerWindowGlow` helper; colour and brightness crossfade with the 900ms dusk and snap under reduced motion
+- Window brightness comes from the tested `towerWindowGlow` helper
+- Carousel rim bulbs stay lit all night through `carouselLightOpacity`, and brighten further once hobbies is visited; daylight still keeps them dark until a visit
+- Visiting hobbies revs the carousel to five times speed via `carouselSpinSpeed`, coasting back to the 0.25 rad/s idle over about four seconds; the burst is the only window where the ride forces full-rate frames
+- Lit props that use raw basic materials share the `useNightMix` hook so colour and brightness crossfade with the 900ms dusk and snap under reduced motion
 
 Note on `npm run test:e2e`: at the default six workers, `archive.spec.ts` "closing after visiting multiple islands" starves the 4s `data-selected-zone` assertion on the desktop and tablet viewports (six concurrent WebGL contexts delay the walk `setTimeout` chain). It passes consistently at three workers or fewer.
 

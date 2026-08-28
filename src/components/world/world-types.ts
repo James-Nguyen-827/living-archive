@@ -49,10 +49,10 @@ export interface WorldMap {
 
 export type ReactionKind =
   | 'bridge-sweep'
-  | 'page-fins'
-  | 'platform-lift'
+  | 'page-riffle'
+  | 'gate-slot'
   | 'carousel-spin'
-  | 'beacon-ring';
+  | 'lantern-rings';
 
 export interface WorldReaction {
   zone: ZoneId;

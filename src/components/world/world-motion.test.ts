@@ -9,6 +9,21 @@ import {
   nearestEquivalentAngle,
   nudgeAngle,
   carouselLightOpacity,
+  carouselSpinSpeed,
+  CAROUSEL_IDLE_SPIN_SPEED,
+  advanceTowerReaction,
+  gearhousePose,
+  gateBlockPose,
+  keepCrankTurn,
+  lanternRingSpin,
+  orreryBeamPose,
+  orreryRingPose,
+  pagewellBookmarkTilt,
+  pagewellFolioYaw,
+  pageRiffleYaw,
+  paradoxCubePose,
+  paradoxFrameIdleSpin,
+  paradoxFramePose,
   rotatePointY,
   signalBarProgress,
   themeTransitionProgress,
@@ -78,19 +93,43 @@ describe('world rotation motion', () => {
     expect(aboutSignalPose(0, false, false)).toEqual({ scale: 0.01, opacity: 0 });
   });
 
-  it('keeps carousel bulbs dark until the hobbies zone is visited', () => {
-    expect(carouselLightOpacity(0, false, false)).toBe(0);
-    expect(carouselLightOpacity(1.2, false, true)).toBe(0);
+  it('keeps carousel bulbs dark by day until the hobbies zone is visited', () => {
+    expect(carouselLightOpacity(0, false, false, false)).toBe(0);
+    expect(carouselLightOpacity(1.2, false, false, true)).toBe(0);
+  });
+
+  it('lights carousel bulbs all night whether or not the zone was visited', () => {
+    expect(carouselLightOpacity(0, true, false, false)).toBe(0.6);
+    expect(carouselLightOpacity(1.2, true, false, true)).toBe(0.6);
+    for (const elapsed of [0, 0.25, 0.5, 1.4]) {
+      const opacity = carouselLightOpacity(elapsed, true, true, false);
+      expect(opacity).toBeGreaterThan(carouselLightOpacity(elapsed, true, false, false));
+      expect(opacity).toBeLessThanOrEqual(1);
+    }
   });
 
   it('holds carousel bulbs lit under reduced motion and pulses them otherwise', () => {
-    expect(carouselLightOpacity(0, true, true)).toBe(0.85);
+    expect(carouselLightOpacity(0, false, true, true)).toBe(0.85);
+    expect(carouselLightOpacity(0, true, true, true)).toBe(0.95);
     for (const elapsed of [0, 0.25, 0.5, 1.4]) {
-      const opacity = carouselLightOpacity(elapsed, true, false);
+      const opacity = carouselLightOpacity(elapsed, false, true, false);
       expect(opacity).toBeGreaterThanOrEqual(0.1);
       expect(opacity).toBeLessThanOrEqual(0.8);
     }
-    expect(carouselLightOpacity(0, true, false)).not.toBe(carouselLightOpacity(0.4, true, false));
+    expect(carouselLightOpacity(0, false, true, false)).not.toBe(carouselLightOpacity(0.4, false, true, false));
+  });
+
+  it('gives the carousel a visit burst that settles back to the idle spin', () => {
+    expect(carouselSpinSpeed(0, false, false)).toBe(CAROUSEL_IDLE_SPIN_SPEED);
+    expect(carouselSpinSpeed(0, true, true)).toBe(0);
+    expect(carouselSpinSpeed(0, true, false)).toBe(CAROUSEL_IDLE_SPIN_SPEED);
+    const peak = carouselSpinSpeed(0.6, true, false);
+    expect(peak).toBeCloseTo(CAROUSEL_IDLE_SPIN_SPEED * 5);
+    for (const elapsed of [0.1, 0.6, 1, 2]) {
+      expect(carouselSpinSpeed(elapsed, true, false)).toBeGreaterThan(CAROUSEL_IDLE_SPIN_SPEED);
+      expect(carouselSpinSpeed(elapsed, true, false)).toBeLessThanOrEqual(peak);
+    }
+    expect(carouselSpinSpeed(6, true, false)).toBeCloseTo(CAROUSEL_IDLE_SPIN_SPEED, 2);
   });
 
   it('lights tower windows at night and leaves them faint in daylight', () => {
@@ -110,5 +149,126 @@ describe('world rotation motion', () => {
       }
     }
     expect(towerWindowGlow(0, true, true, false)).not.toBe(towerWindowGlow(0.4, true, true, false));
+  });
+
+  it('cranks the work keep drum a quarter-turn on visit', () => {
+    expect(keepCrankTurn(0, false, false)).toBe(0);
+    expect(keepCrankTurn(0, true, true)).toBeCloseTo(Math.PI / 2);
+    expect(keepCrankTurn(0.62, true, false)).toBeCloseTo(Math.PI / 2);
+    expect(keepCrankTurn(0.31, true, false)).toBeGreaterThan(0);
+    expect(keepCrankTurn(0.31, true, false)).toBeLessThan(Math.PI / 2);
+  });
+
+  it('riffles archive slabs with staggered visit motion', () => {
+    expect(pageRiffleYaw(0, 0, false, false)).toBe(0);
+    expect(pageRiffleYaw(0, 1, false, false)).toBeGreaterThan(0);
+    expect(pageRiffleYaw(0, 2, true, true)).toBeGreaterThan(pageRiffleYaw(0, 2, false, true));
+    expect(pageRiffleYaw(0.62, 3, true, false)).not.toBe(pageRiffleYaw(0, 3, true, false));
+  });
+
+  it('slots the experiments gate cube through the lintel on visit', () => {
+    const floatY = 1.2;
+    const slotY = 1.55;
+    expect(gateBlockPose(0, false, false, floatY, slotY).y).toBeCloseTo(floatY);
+    expect(gateBlockPose(0, true, true, floatY, slotY).rotationY).toBeCloseTo(Math.PI / 2);
+    const mid = gateBlockPose(0.45, true, false, floatY, slotY);
+    expect(mid.y).toBeGreaterThan(floatY);
+    expect(mid.y).toBeLessThanOrEqual(slotY);
+    expect(gateBlockPose(0.62, true, false, floatY, slotY).y).toBeCloseTo(floatY, 1);
+  });
+
+  it('counter-rotates lighthouse rings faster on visit', () => {
+    const idle = lanternRingSpin(2, false, false);
+    const active = lanternRingSpin(2, true, false);
+    expect(idle.inner).toBeGreaterThan(0);
+    expect(idle.outer).toBeLessThan(0);
+    expect(Math.abs(active.inner)).toBeGreaterThan(Math.abs(idle.inner));
+    expect(lanternRingSpin(0, true, true)).toEqual({ inner: 0.45, outer: -0.32 });
+  });
+});
+
+describe('narrative tower reactions', () => {
+  it('advances arrivals over 1.05 seconds and exits over 0.65 seconds', () => {
+    const arriving = advanceTowerReaction({ progress: 0, sequence: 4 }, 0.525, true, 4, false);
+    const exiting = advanceTowerReaction({ progress: 1, sequence: 4 }, 0.325, false, 4, false);
+
+    expect(arriving.progress).toBeCloseTo(0.5);
+    expect(exiting.progress).toBeCloseTo(0.5);
+  });
+
+  it('replays an active tower when its reaction sequence changes', () => {
+    const replayed = advanceTowerReaction({ progress: 1, sequence: 4 }, 0, true, 5, false);
+    const replayMidpoint = advanceTowerReaction(replayed, 0.525, true, 5, false);
+
+    expect(replayed).toEqual({ progress: 0, sequence: 5 });
+    expect(replayMidpoint.progress).toBeCloseTo(0.5);
+  });
+
+  it('snaps reduced-motion towers to their correct held pose', () => {
+    expect(advanceTowerReaction({ progress: 0.4, sequence: 2 }, 0, true, 2, true).progress).toBe(1);
+    expect(advanceTowerReaction({ progress: 0.6, sequence: 2 }, 0, false, 2, true).progress).toBe(0);
+  });
+
+  it('turns the Gearhouse room, aligns its stair, and raises its piston', () => {
+    expect(gearhousePose(0)).toEqual({ roomYaw: 0, stairYaw: -Math.PI / 4, pistonLift: 0 });
+
+    const midpoint = gearhousePose(0.5);
+    const active = gearhousePose(1);
+    expect(midpoint.roomYaw).toBeGreaterThan(Math.PI / 4);
+    expect(active.roomYaw).toBeCloseTo(Math.PI / 2);
+    expect(active.stairYaw).toBeCloseTo(0);
+    expect(active.pistonLift).toBeCloseTo(0.22);
+  });
+
+  it('fans the Pagewell folios in a rising wave and tips its bookmark', () => {
+    expect(pagewellFolioYaw(0, 4)).toBeCloseTo(0.16);
+    expect(pagewellFolioYaw(0.45, 0)).toBeGreaterThan(pagewellFolioYaw(0, 0));
+    expect(pagewellFolioYaw(0.45, 0)).toBeGreaterThan(pagewellFolioYaw(0.45, 4));
+    expect(pagewellFolioYaw(1, 4)).toBeCloseTo(4 * Math.PI / 5);
+    expect(pagewellBookmarkTilt(1)).toBeCloseTo(0.35);
+  });
+
+  it('counter-spins the Paradox Gate frames while idle', () => {
+    expect(paradoxFrameIdleSpin(2, 0, true)).toEqual({ rotationY: 0, rotationZ: 0 });
+    const first = paradoxFrameIdleSpin(2, 0, false);
+    const second = paradoxFrameIdleSpin(2, 1, false);
+    expect(first.rotationY).toBeCloseTo(0.36);
+    expect(second.rotationY).toBeCloseTo(-0.48);
+    expect(first.rotationY).not.toBeCloseTo(second.rotationY);
+    expect(first.rotationZ).not.toBe(0);
+    expect(paradoxFrameIdleSpin(2, 2, false).rotationZ).toBe(0);
+  });
+
+  it('aligns the Paradox Gate frames and locks its cube in the aperture', () => {
+    const first = paradoxFramePose(1, 0);
+    const second = paradoxFramePose(1, 1);
+    const third = paradoxFramePose(1, 2);
+    expect([first.rotationZ, second.rotationZ, third.rotationZ]).toEqual([
+      0,
+      Math.PI / 4,
+      Math.PI / 2,
+    ]);
+    expect(first.rotationY).toBe(0);
+    expect(second.rotationY).toBe(0);
+    expect(third.rotationY).toBe(0);
+
+    const travelling = paradoxCubePose(0.5, 3.2, 2.25);
+    const held = paradoxCubePose(1, 3.2, 2.25);
+    expect(Math.hypot(travelling.x, travelling.z)).toBeGreaterThan(0.1);
+    expect(held).toEqual({ x: 0, y: 2.25, z: 0, rotationY: Math.PI });
+  });
+
+  it('aligns the Orrery rings and holds its beam toward the habitat', () => {
+    expect(orreryRingPose(0, 0, 0.4)).not.toEqual(orreryRingPose(0, 1, 0.4));
+    expect(orreryRingPose(1, 0, 0.4)).toEqual(orreryRingPose(1, 2, 0.4));
+    expect(orreryRingPose(1, 0, 0.4)).toEqual({
+      rotationX: Math.PI / 2,
+      rotationY: 0,
+      rotationZ: 0,
+    });
+
+    const held = orreryBeamPose(1, -2.42);
+    expect(held.yaw).toBeCloseTo(-2.42);
+    expect(held.opacity).toBeCloseTo(0.34);
   });
 });

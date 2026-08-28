@@ -1,4 +1,8 @@
 import type { WorldMap } from './world-types';
+import {
+  estimateTowerDesignBudget,
+  towerArchetypeFromModuleId,
+} from './tower-designs';
 
 export interface SceneBudgetEstimate {
   drawCalls: number;
@@ -8,12 +12,18 @@ export interface SceneBudgetEstimate {
 export function estimateSceneBudget(world: WorldMap, treeCount = 0): SceneBudgetEstimate {
   let boxMeshes = 0;
   let otherMeshes = 0;
+  let towerDrawCalls = 0;
+  let towerTriangles = 0;
 
   for (const module of world.modules) {
     if (module.kind === 'stair') boxMeshes += 1;
     else if (module.kind === 'tower') {
-      boxMeshes += 4;
-      otherMeshes += 2;
+      const budget = estimateTowerDesignBudget(
+        towerArchetypeFromModuleId(module.id),
+        module.size[1],
+      );
+      towerDrawCalls += budget.drawCalls;
+      towerTriangles += budget.triangles;
     } else if (module.kind === 'bridge') boxMeshes += 3;
     else if (module.kind === 'water') boxMeshes += 4;
     else if (module.kind === 'platform') {
@@ -34,7 +44,7 @@ export function estimateSceneBudget(world: WorldMap, treeCount = 0): SceneBudget
   const travelerCalls = 2;
   const shadowGroundCalls = 1;
   const seaPlaneCalls = 1;
-  const drawCalls = boxMeshes + otherMeshes + instancedCalls + carouselCalls + travelerCalls + shadowGroundCalls + seaPlaneCalls;
-  const triangles = boxMeshes * 12 + otherMeshes * 20 + treeCount * 28 + ruinMeshes * 12 + carouselTriangles + 120;
+  const drawCalls = boxMeshes + otherMeshes + towerDrawCalls + instancedCalls + carouselCalls + travelerCalls + shadowGroundCalls + seaPlaneCalls;
+  const triangles = boxMeshes * 12 + otherMeshes * 20 + towerTriangles + treeCount * 28 + ruinMeshes * 12 + carouselTriangles + 120;
   return { drawCalls, triangles };
 }

@@ -33,4 +33,19 @@ describe('WORLD_MAP stable sculpture', () => {
     ]);
     expect(new Set(WORLD_REACTIONS.map((reaction) => reaction.kind)).size).toBe(5);
   });
+
+  it('binds every narrative tower to the shared 1.05 second arrival contract', () => {
+    const towerByZone = new Map([
+      ['work', 'work-tower'],
+      ['field-notes', 'notes-tower'],
+      ['experiments', 'experiments-tower'],
+      ['about', 'about-tower'],
+    ] as const);
+
+    for (const [zone, towerId] of towerByZone) {
+      const reaction = WORLD_REACTIONS.find((candidate) => candidate.zone === zone);
+      expect(reaction?.moduleIds).toContain(towerId);
+      expect(reaction?.durationMs).toBe(1_050);
+    }
+  });
 });
