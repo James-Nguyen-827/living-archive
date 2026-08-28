@@ -1,0 +1,33 @@
+---
+import { getCollection, render } from 'astro:content';
+import EntryLayout from '../../layouts/EntryLayout.astro';
+import { site } from '../../config/site';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('work');
+  return entries.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const creativeWorkSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'CreativeWork',
+  name: entry.data.title,
+  description: entry.data.summary,
+  dateCreated: String(entry.data.year),
+  creator: { '@type': 'Person', name: site.owner, url: site.url },
+  url: new URL(`/work/${entry.id}`, site.url),
+};
+---
+
+<EntryLayout
+  title={entry.data.title}
+  summary={entry.data.summary}
+  meta={`${entry.data.year} / ${entry.data.role} / ${entry.data.disciplines.join(' · ')}`}
+  image="/og/work.png"
+>
+  <Content />
+  <p>{entry.data.outcome}</p>
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(creativeWorkSchema)} />
+</EntryLayout>

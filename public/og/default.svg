@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f1f1e9"/>
+  <path d="M0 474h1200M305 0v630M895 0v630" stroke="#2b3022" stroke-opacity=".18"/>
+  <path d="M700 122 920 250 700 378 480 250Z" fill="#cbd4a8" stroke="#53652d" stroke-width="4"/>
+  <path d="m480 250 220 128v116L480 366Z" fill="#a9b87d" stroke="#53652d" stroke-width="4"/>
+  <path d="m920 250-220 128v116l220-128Z" fill="#718047" stroke="#53652d" stroke-width="4"/>
+  <path d="m747 207 87 50-87 50-87-50Z" fill="#f1654b"/>
+  <text x="72" y="100" fill="#2b3022" font-family="Arial Narrow,Arial,sans-serif" font-size="28" font-weight="700" letter-spacing="5">LIVING ARCHIVE</text>
+  <text x="72" y="528" fill="#2b3022" font-family="Arial Narrow,Arial,sans-serif" font-size="108" font-weight="700" letter-spacing="-4">WORK IS A PLACE.</text>
+</svg>
+

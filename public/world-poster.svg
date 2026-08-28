@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+  <title id="title">Living Archive world</title>
+  <desc id="desc">A precise low-poly landscape of square platforms, bridges, towers, trees, water, and a coral traveler.</desc>
+  <rect width="1200" height="760" fill="#fff"/>
+  <g stroke="#52602f" stroke-width="3" stroke-linejoin="round">
+    <path d="m535 318 130 75-130 75-130-75Z" fill="#dce0c8"/><path d="m405 393 130 75v42l-130-75Z" fill="#b4be87"/><path d="m665 393-130 75v42l130-75Z" fill="#849254"/>
+    <path d="m260 386 78 45-78 45-78-45Z" fill="#dce0c8"/><path d="m182 431 78 45v35l-78-45Z" fill="#b4be87"/><path d="m338 431-78 45v35l78-45Z" fill="#849254"/>
+    <path d="m732 372 78 45-78 45-78-45Z" fill="#dce0c8"/><path d="m654 417 78 45v35l-78-45Z" fill="#b4be87"/><path d="m810 417-78 45v35l78-45Z" fill="#849254"/>
+    <path d="m501 160 78 45-78 45-78-45Z" fill="#dce0c8"/><path d="m423 205 78 45v35l-78-45Z" fill="#b4be87"/><path d="m579 205-78 45v35l78-45Z" fill="#849254"/>
+    <path d="m520 554 78 45-78 45-78-45Z" fill="#dce0c8"/><path d="m442 599 78 45v35l-78-45Z" fill="#b4be87"/><path d="m598 599-78 45v35l78-45Z" fill="#849254"/>
+    <path d="m882 503 78 45-78 45-78-45Z" fill="#dce0c8"/><path d="m804 548 78 45v35l-78-45Z" fill="#b4be87"/><path d="m960 548-78 45v35l78-45Z" fill="#849254"/>
+    <path d="m338 407 140-81 35 20-140 81Z" fill="#53652d"/>
+    <path d="m658 391 76-44 35 20-76 44Z" fill="#53652d"/>
+    <path d="m544 474 31-18 112 65-31 18Z" fill="#53652d"/>
+    <path d="m502 282 30 18-77 44-30-18Z" fill="#53652d"/>
+    <path d="m775 438 31-18 100 58-31 18Z" fill="#53652d"/>
+    <path d="m215 330 42 24v94l-42-24Z" fill="#b4be87"/><path d="m257 354 42-24v94l-42 24Z" fill="#849254"/><path d="m215 330 42-24 42 24-42 24Z" fill="#dce0c8"/>
+    <path d="m460 86 42 24v116l-42-24Z" fill="#b4be87"/><path d="m502 110 42-24v116l-42 24Z" fill="#849254"/><path d="m460 86 42-24 42 24-42 24Z" fill="#dce0c8"/>
+    <path d="m895 422 42 24v126l-42-24Z" fill="#b4be87"/><path d="m937 446 42-24v126l-42 24Z" fill="#849254"/><path d="m895 422 42-24 42 24-42 24Z" fill="#dce0c8"/>
+  </g>
+  <g fill="#52652c">
+    <path d="m331 552 18-42 18 42-18 11Z"/><path d="m368 574 18-49 18 49-18 11Z"/><path d="m400 548 18-43 18 43-18 11Z"/>
+    <path d="m997 512 18-45 18 45-18 11Z"/><path d="m1023 554 18-53 18 53-18 11Z"/>
+  </g>
+  <path d="m319 542 91 53-70 40-91-53Z" fill="#64bcc3" stroke="#287d87" stroke-width="3"/>
+  <g fill="#e85f48"><path d="m248 293 15-9 15 9-15 9Z"/><path d="m493 48 15-9 15 9-15 9Z"/><path d="m928 384 15-9 15 9-15 9Z"/></g>
+  <g transform="translate(540 370)"><path d="m0 0 12 7v28l-12 7-12-7V7Z" fill="#e85f48"/><path d="m0-18 13 8L0-2l-13-8Z" fill="#fff" stroke="#52602f" stroke-width="2"/></g>
+</svg>
+

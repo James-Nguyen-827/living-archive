@@ -1,0 +1,17 @@
+---
+import { getCollection, render } from 'astro:content';
+import EntryLayout from '../../layouts/EntryLayout.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('notes');
+  return entries.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const date = new Intl.DateTimeFormat('en', { dateStyle: 'long' }).format(entry.data.publishDate);
+---
+
+<EntryLayout title={entry.data.title} summary={entry.data.summary} meta={`${date} / ${entry.data.tags.join(' · ')}`} image="/og/notes.png">
+  <Content />
+</EntryLayout>

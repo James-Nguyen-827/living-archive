@@ -1,0 +1,30 @@
+---
+import { site } from '../config/site';
+---
+
+<footer class="site-footer">
+  <a href={`mailto:${site.email}`}>{site.email}</a>
+  <span>© {new Date().getFullYear()} {site.owner}</span>
+</footer>
+
+<style>
+  .site-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    align-items: baseline;
+    width: min(100%, var(--content-width));
+    margin-inline: auto;
+    padding: clamp(2.5rem, 6vw, 4rem) var(--page-gutter) 2rem;
+    color: var(--muted-ink);
+    font-size: 0.9rem;
+  }
+
+  .site-footer a {
+    text-decoration: none;
+  }
+
+  @media (max-width: 40rem) {
+    .site-footer a { overflow-wrap: anywhere; }
+  }
+</style>

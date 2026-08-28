@@ -1,0 +1,20 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageIntro from '../../components/PageIntro.astro';
+import ContentIndex from '../../components/ContentIndex.astro';
+
+const entries = (await getCollection('archive', ({ data }) => data.kind === 'hobby')).sort((a, b) => b.data.year - a.data.year);
+const items = entries.map((entry) => ({
+  href: `/hobbies/${entry.id}`,
+  title: entry.data.title,
+  summary: entry.data.summary,
+  meta: String(entry.data.year),
+}));
+---
+
+<BaseLayout title="Hobbies" description="Things I return to without needing them to become work.">
+  <PageIntro title="Hobbies" description="Practices that feed the work without justifying themselves." />
+  <ContentIndex items={items} />
+  {entries.length === 0 && <p class="empty-state">Nothing here yet.</p>}
+</BaseLayout>

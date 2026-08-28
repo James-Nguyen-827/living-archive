@@ -1,0 +1,37 @@
+---
+interface Item {
+  href: string;
+  title: string;
+  summary: string;
+  meta: string;
+}
+
+interface Props {
+  items: Item[];
+}
+
+const { items } = Astro.props;
+---
+
+<div class="content-index page-shell">
+  <ol class="indexed-list">
+    {items.map((item) => (
+      <li>
+        <a class="indexed-list__link" href={item.href}>
+          <h2>{item.title}</h2>
+          <p>{item.summary}</p>
+          <span class="indexed-list__meta meta-list">{item.meta}</span>
+        </a>
+      </li>
+    ))}
+  </ol>
+</div>
+
+<style>
+  .indexed-list__meta {
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    align-items: flex-start;
+  }
+</style>

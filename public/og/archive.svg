@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#f1f1e9"/><path d="M0 472h1200M320 0v630M882 0v630" stroke="#2b3022" stroke-opacity=".2"/>
+  <path d="m742 136 100 58-100 58-100-58Z" fill="#cbd4a8" stroke="#53652d" stroke-width="4"/><path d="m842 194 116 67-116 67-116-67Z" fill="#65bdc5" stroke="#287d87" stroke-width="4"/><path d="m958 261 100 58-100 58-100-58Z" fill="#a9b87d" stroke="#53652d" stroke-width="4"/><path d="m842 328 116 67-116 67-116-67Z" fill="#53652d"/>
+  <rect x="72" y="72" width="16" height="60" fill="#e75f49"/><text x="110" y="112" fill="#2b3022" font-family="Arial Narrow,Arial,sans-serif" font-size="32" font-weight="700" letter-spacing="4">LIVING ARCHIVE</text>
+  <text x="72" y="526" fill="#2b3022" font-family="Arial Narrow,Arial,sans-serif" font-size="118" font-weight="700" letter-spacing="-4">EXPLORE / KEEP</text>
+</svg>
+

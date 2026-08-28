@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageIntro from '../../components/PageIntro.astro';
+import { site } from '../../config/site';
+---
+
+<BaseLayout title="About" description="About James, the person maintaining this living archive.">
+  <PageIntro title="About" />
+  <section class="about-grid page-shell">
+    <p>I like projects where structure is visible: interfaces that explain themselves, identities that survive many hands, and tools with a clear relationship to the physical world.</p>
+    <div class="about-contact">
+      <p><a href={`mailto:${site.email}`}>{site.email}</a></p>
+      <ul>
+        {site.profiles.map((profile) => <li><a href={profile.href}>{profile.label}</a></li>)}
+      </ul>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .about-grid {
+    display: grid;
+    gap: 1.25rem;
+    max-width: var(--measure);
+    padding-block: clamp(2rem, 5vw, 4rem) clamp(3rem, 8vw, 6rem);
+  }
+  .about-grid p { margin: 0; color: var(--muted-ink); }
+  .about-contact ul { margin: .5rem 0 0; padding-left: 1.2rem; }
+</style>

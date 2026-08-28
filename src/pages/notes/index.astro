@@ -1,0 +1,28 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageIntro from '../../components/PageIntro.astro';
+import ContentIndex from '../../components/ContentIndex.astro';
+
+const notes = (await getCollection('notes')).sort(
+  (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf(),
+);
+const formatter = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric' });
+const items = notes.map((note) => ({
+  href: `/notes/${note.id}`,
+  title: note.data.title,
+  summary: note.data.summary,
+  meta: formatter.format(note.data.publishDate),
+}));
+---
+
+<BaseLayout title="Field Notes" description="Observations on design, architecture, interfaces, and the practice around them.">
+  <PageIntro title="Field Notes" description="Writing from the field—questions kept open and principles tested against real work." />
+  <ContentIndex items={items} />
+  {notes.length === 0 && <p class="empty-state">No field notes are published yet.</p>}
+  <p class="note-rss page-shell"><a href="/rss.xml">RSS</a></p>
+</BaseLayout>
+
+<style>
+  .note-rss { margin: 0; padding-block: 1.5rem 3rem; }
+</style>

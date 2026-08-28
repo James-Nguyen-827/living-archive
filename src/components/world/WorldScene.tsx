@@ -1,0 +1,1374 @@
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import {
+  BoxGeometry,
+  BufferGeometry,
+  Color,
+  Euler,
+  Matrix4,
+  AmbientLight,
+  DirectionalLight,
+  Group,
+  InstancedMesh,
+  MathUtils,
+  Mesh,
+  MeshLambertMaterial,
+  MeshBasicMaterial,
+  Object3D,
+  OrthographicCamera,
+  Vector3,
+} from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import type { ProjectedLabel } from './label-layout';
+import { getStairSteps } from './stair-geometry';
+import { WORLD_MAP, ZONE_NODES } from './world-map';
+import { easeOutQuint, nearestEquivalentAngle, rotatePointY, themeTransitionProgress, aboutSignalPose, cameraReframeProgress, carouselLightOpacity, towerWindowGlow } from './world-motion';
+import type { ExperiencePhase, GridPoint, WorldModule, ZoneId } from './world-types';
+
+export type LabelProjectionHandler = (labels: readonly ProjectedLabel[]) => void;
+
+interface Props {
+  rotationAngle: number;
+  theme: 'day' | 'night';
+  phase: ExperiencePhase;
+  characterNodeId: string;
+  path: readonly string[];
+  targetZone: ZoneId | null;
+  selectedZone: ZoneId | null;
+  reactionSequence: number;
+  reducedMotion: boolean;
+  onZoneRequest: (zone: ZoneId) => void;
+  onLabelsProject: LabelProjectionHandler;
+}
+
+const DAY = {
+  surface: '#dfe0cf', structure: '#b8c28d', olive: '#53652d', moss: '#6f8f2f', dirt: '#7a6848',
+  coral: '#e75f49', water: '#65bdc5', shadow: '#687055', sky: '#ffffff', sun: '#f4c84d', moon: '#dce8dc',
+  head: '#f4f1e4',
+};
+const NIGHT = {
+  surface: '#3a4554', structure: '#5a6b78', olive: '#8fb85a', moss: '#7eab3d', dirt: '#6a5d48',
+  coral: '#ff795b', water: '#4aa0b0', shadow: '#1c2430', sky: '#2a3550', sun: '#82512e', moon: '#d5e8c0',
+  head: '#efe8d2',
+};
+/** Tower windows are lamplight, not sunlight, so they keep their own warm pair. */
+const TOWER_WINDOW = { day: '#f2d489', night: '#ffd35c' };
+const TOWER_WINDOW_DAY_COLOR = new Color(TOWER_WINDOW.day);
+const TOWER_WINDOW_NIGHT_COLOR = new Color(TOWER_WINDOW.night);
+const PLATFORM_PILLAR_DEPTH = 1.75;
+const WORLD_PILLAR_BOTTOM = -2.25;
+const WORLD_WATER_LEVEL = -PLATFORM_PILLAR_DEPTH / 2;
+const WORLD_WATER_THICKNESS = WORLD_WATER_LEVEL - WORLD_PILLAR_BOTTOM;
+const WORLD_WATER_CENTER_Y = (WORLD_WATER_LEVEL + WORLD_PILLAR_BOTTOM) / 2;
+/** Decorative modules are authored on half-unit Y; pad tops sit a quarter-unit lower. */
+const DECOR_GROUND_SNAP = 0.25;
+type PaletteKey = keyof typeof DAY;
+
+function platformShaftLayout(module: WorldModule) {
+  const slabHeight = module.size[1] / 2;
+  const collarHeight = slabHeight;
+  const mossHeight = slabHeight;
+  const platformY = module.transform.position[1];
+  const extension = Math.max(0, platformY + 0.5);
+  const shaftHeight = collarHeight + PLATFORM_PILLAR_DEPTH + extension;
+  const localBottom = WORLD_PILLAR_BOTTOM - platformY;
+  const shaftCenterY = localBottom + shaftHeight / 2;
+  return {
+    mossHeight,
+    mossCenterY: collarHeight + mossHeight / 2,
+    shaftHeight,
+    shaftCenterY,
+    capWidth: module.size[0],
+    capDepth: module.size[2],
+  };
+}
+
+function PlatformBody({
+  module,
+  theme,
+  mossRef,
+  interactive,
+  onSelect,
+  onPointerOver,
+  onPointerOut,
+}: {
+  module: WorldModule;
+  theme: Props['theme'];
+  mossRef?: React.RefObject<MeshLambertMaterial | null>;
+  interactive?: boolean;
+  onSelect?: () => void;
+  onPointerOver?: () => void;
+  onPointerOut?: () => void;
+}) {
+  const { mossHeight, mossCenterY, shaftHeight, shaftCenterY, capWidth, capDepth } = platformShaftLayout(module);
+  return (
+    <>
+      <mesh position={[0, shaftCenterY, 0]} castShadow receiveShadow>
+        <boxGeometry args={[capWidth, shaftHeight, capDepth]} />
+        <AnimatedLambert tone="dirt" theme={theme} />
+      </mesh>
+      <mesh
+        position={[0, mossCenterY, 0]}
+        castShadow
+        receiveShadow
+        onPointerOver={interactive ? (event) => { event.stopPropagation(); onPointerOver?.(); } : undefined}
+        onPointerOut={interactive ? () => onPointerOut?.() : undefined}
+        onClick={interactive ? (event) => { event.stopPropagation(); onSelect?.(); } : undefined}
+      >
+        <boxGeometry args={[capWidth, mossHeight, capDepth]} />
+        {mossRef
+          ? <meshLambertMaterial ref={mossRef} color={(theme === 'night' ? NIGHT : DAY).moss} flatShading />
+          : <AnimatedLambert tone="moss" theme={theme} />}
+      </mesh>
+    </>
+  );
+}
+
+/** Tones outside the shared palette (the carousel's fairground colours) pass explicit hexes. */
+type Tone = PaletteKey | { day: string; night: string };
+const toneColor = (tone: Tone, theme: Props['theme']) =>
+  typeof tone === 'string' ? (theme === 'night' ? NIGHT : DAY)[tone] : (theme === 'night' ? tone.night : tone.day);
+
+function AnimatedLambert({ tone, theme, transparent = false, opacity = 1, depthWrite = true }: {
+  tone: Tone; theme: Props['theme']; transparent?: boolean; opacity?: number; depthWrite?: boolean;
+}) {
+  const material = useRef<MeshLambertMaterial>(null);
+  const from = useRef(new Color(toneColor(tone, 'day')));
+  const elapsed = useRef(0.9);
+  useEffect(() => {
+    if (material.current) from.current.copy(material.current.color);
+    elapsed.current = 0;
+  }, [theme]);
+  const { invalidate } = useThree();
+  useFrame((_state, delta) => {
+    if (!material.current) return;
+    elapsed.current += delta;
+    material.current.color.lerpColors(from.current, new Color(toneColor(tone, theme)), themeTransitionProgress(elapsed.current));
+    if (elapsed.current < 0.9) invalidate();
+  });
+  return <meshLambertMaterial ref={material} color={toneColor(tone, theme)} flatShading transparent={transparent} opacity={opacity} depthWrite={depthWrite} />;
+}
+
+function SceneLight({
+  theme,
+  reducedMotion,
+  dusk,
+}: Pick<Props, 'theme' | 'reducedMotion'> & { dusk: { current: number } }) {
+  const light = useRef<DirectionalLight>(null);
+  const ambient = useRef<AmbientLight>(null);
+  const progress = dusk;
+  const from = useRef(progress.current);
+  const elapsed = useRef(0.9);
+  const target = theme === 'night' ? 1 : 0;
+  const { invalidate } = useThree();
+  useEffect(() => {
+    from.current = progress.current;
+    elapsed.current = 0;
+    invalidate();
+  }, [invalidate, progress, theme]);
+  useFrame((_state, delta) => {
+    if (reducedMotion) {
+      progress.current = target;
+      elapsed.current = 0.9;
+    } else {
+      elapsed.current += delta;
+      progress.current = MathUtils.lerp(from.current, target, themeTransitionProgress(elapsed.current));
+    }
+    const value = progress.current;
+    if (light.current) {
+      light.current.position.set(MathUtils.lerp(8, -7, value), MathUtils.lerp(15, 8, value), MathUtils.lerp(10, 6, value));
+      light.current.intensity = MathUtils.lerp(2.8, 1.85, value);
+      light.current.color.lerpColors(new Color('#fff9df'), new Color('#b8c8e0'), value);
+    }
+    if (ambient.current) {
+      ambient.current.intensity = MathUtils.lerp(1.5, 0.95, value);
+      ambient.current.color.lerpColors(new Color('#ffffff'), new Color('#9eb4d0'), value);
+    }
+    if (elapsed.current < 0.9) invalidate();
+  });
+  return (
+    <>
+      <ambientLight ref={ambient} intensity={1.5} />
+      <directionalLight
+        ref={light}
+        position={[8, 15, 10]}
+        intensity={2.8}
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-camera-left={-18}
+        shadow-camera-right={18}
+        shadow-camera-top={18}
+        shadow-camera-bottom={-18}
+      />
+      <NightAmbience theme={theme} reducedMotion={reducedMotion} dusk={progress} />
+    </>
+  );
+}
+
+function CelestialBodies({ theme, dusk }: { theme: Props['theme']; dusk: { current: number } }) {
+  const sun = useRef<Mesh>(null);
+  const moon = useRef<Mesh>(null);
+  const { invalidate } = useThree();
+  useFrame(() => {
+    const value = dusk.current;
+    if (sun.current) {
+      const material = sun.current.material as MeshLambertMaterial;
+      material.transparent = true;
+      material.opacity = Math.max(0, 1 - value);
+      sun.current.visible = material.opacity > 0.04;
+    }
+    if (moon.current) {
+      const material = moon.current.material as MeshLambertMaterial;
+      material.transparent = true;
+      material.opacity = Math.max(0, value);
+      moon.current.visible = material.opacity > 0.04;
+    }
+    if (value > 0 && value < 1) invalidate();
+  });
+  return (
+    <>
+      <mesh ref={sun} position={[5.5, 10.2, -6.5]}>
+        <icosahedronGeometry args={[0.7, 1]} /><AnimatedLambert tone="sun" theme={theme} transparent opacity={1} />
+      </mesh>
+      <mesh ref={moon} position={[6.4, 10.5, -5.8]} visible={false}>
+        <icosahedronGeometry args={[0.55, 1]} /><AnimatedLambert tone="moon" theme={theme} transparent opacity={0} />
+      </mesh>
+    </>
+  );
+}
+
+function NightAmbience({
+  theme,
+}: {
+  theme: Props['theme'];
+  reducedMotion: boolean;
+  dusk: { current: number };
+}) {
+  return (
+    <>
+      <pointLight position={[-8, 3.4, -1]} intensity={theme === 'night' ? 1.55 : 0} color="#ffb38a" distance={10} />
+      <pointLight position={[1, 4.6, -9]} intensity={theme === 'night' ? 1.4 : 0} color="#d7ecff" distance={9} />
+      <pointLight position={[8, 3.8, 9]} intensity={theme === 'night' ? 1.45 : 0} color="#ffc7a1" distance={10} />
+    </>
+  );
+}
+
+function CameraRig({ selectedZone, rotationAngle, reducedMotion }: Pick<Props, 'selectedZone' | 'rotationAngle' | 'reducedMotion'>) {
+  const { camera, size } = useThree();
+  const currentFocus = useRef(new Vector3());
+  const zoomRef = useRef(size.width < 500 ? 20 : size.width < 900 ? 30 : 37);
+  const transition = useRef<{
+    from: Vector3; to: Vector3; fromZoom: number; toZoom: number; elapsed: number;
+  } | null>(null);
+  const destination = useMemo(() => {
+    if (!selectedZone) return new Vector3();
+    const node = WORLD_MAP.nodes.find((item) => item.id === ZONE_NODES[selectedZone]);
+    if (!node) return new Vector3();
+    const rotated = rotatePointY(node.position, rotationAngle);
+    const verticalCompositionOffset = size.width < 500 ? 4.6 : 2.3;
+    return new Vector3(rotated[0] + verticalCompositionOffset, rotated[1], rotated[2] + verticalCompositionOffset);
+  }, [rotationAngle, selectedZone, size.width]);
+  const targetZoom = useMemo(() => {
+    const baseZoom = size.width < 500 ? 20 : size.width < 900 ? 30 : 37;
+    return selectedZone ? baseZoom * 1.18 : baseZoom;
+  }, [selectedZone, size.width]);
+
+  useEffect(() => {
+    transition.current = {
+      from: currentFocus.current.clone(),
+      to: destination.clone(),
+      fromZoom: zoomRef.current,
+      toZoom: targetZoom,
+      elapsed: 0,
+    };
+  }, [destination, targetZoom]);
+
+  useFrame((_state, delta) => {
+    const orthographic = camera as OrthographicCamera;
+    if (reducedMotion) {
+      currentFocus.current.copy(destination);
+      transition.current = null;
+      orthographic.zoom = targetZoom;
+      zoomRef.current = targetZoom;
+    } else if (transition.current) {
+      transition.current.elapsed += delta;
+      const progress = cameraReframeProgress(transition.current.elapsed);
+      currentFocus.current.lerpVectors(transition.current.from, transition.current.to, progress);
+      orthographic.zoom = MathUtils.lerp(transition.current.fromZoom, transition.current.toZoom, progress);
+      zoomRef.current = orthographic.zoom;
+      if (progress >= 1) transition.current = null;
+    } else {
+      currentFocus.current.lerp(destination, 0.12);
+      orthographic.zoom = MathUtils.damp(orthographic.zoom, targetZoom, 6, delta);
+      zoomRef.current = orthographic.zoom;
+    }
+    camera.position.copy(currentFocus.current).add(new Vector3(14, 14, 14));
+    camera.lookAt(currentFocus.current);
+    orthographic.updateProjectionMatrix();
+  });
+  return null;
+}
+
+function LabelProjector({ worldGroup, onProject }: { worldGroup: React.RefObject<Group | null>; onProject: LabelProjectionHandler }) {
+  const { camera, size } = useThree();
+  const anchors = useMemo(() => Object.entries(ZONE_NODES).map(([zone, nodeId]) => {
+    const node = WORLD_MAP.nodes.find((item) => item.id === nodeId)!;
+    return { id: zone, point: new Vector3(node.position[0], node.position[1] + 2.05, node.position[2]) };
+  }), []);
+  const last = useRef('');
+  useFrame(() => {
+    if (!worldGroup.current) return;
+    const projected = anchors.map(({ id, point }) => {
+      const screen = worldGroup.current!.localToWorld(point.clone()).project(camera);
+      return {
+        id,
+        x: (screen.x * 0.5 + 0.5) * size.width,
+        y: (-screen.y * 0.5 + 0.5) * size.height,
+        depth: screen.z,
+        width: 1,
+        height: 1,
+      };
+    });
+    const signature = projected.map(({ x, y }) => `${Math.round(x)}:${Math.round(y)}`).join('|');
+    if (signature !== last.current) {
+      last.current = signature;
+      onProject(projected);
+    }
+  });
+  return null;
+}
+
+function StaticBox({ module, tone, theme }: { module: WorldModule; tone: PaletteKey; theme: Props['theme'] }) {
+  const { position, quarterTurns } = module.transform;
+  const bridgeRunsAlongX = module.size[0] > module.size[2];
+  const railHeight = 0.22;
+  const elevatedPlatform = module.kind === 'platform' && position[1] >= 0.5 && module.size[0] >= 3 && module.size[2] >= 3;
+  if (module.kind === 'platform') {
+    return (
+      <group position={position} rotation={[0, quarterTurns * Math.PI / 2, 0]}>
+        <PlatformBody module={module} theme={theme} />
+        {elevatedPlatform && [-1, 1].flatMap((edge) => [-1, 1].map((side) => (
+          <mesh key={`rail-${edge}-${side}`} position={[side * 0.92, module.size[1] + railHeight / 2, edge * (module.size[2] / 2 - 0.05)]} castShadow>
+            <boxGeometry args={[1.15, railHeight, 0.1]} /><AnimatedLambert tone="dirt" theme={theme} />
+          </mesh>
+        )))}
+      </group>
+    );
+  }
+  return (
+    <group position={position} rotation={[0, quarterTurns * Math.PI / 2, 0]}>
+      <mesh position={[0, module.size[1] / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={module.size} /><AnimatedLambert tone={tone} theme={theme} />
+      </mesh>
+      {module.kind === 'bridge' && [-1, 1].map((side) => (
+        <mesh key={side} position={bridgeRunsAlongX
+          ? [0, module.size[1] + railHeight / 2, side * (module.size[2] / 2 - 0.05)]
+          : [side * (module.size[0] / 2 - 0.05), module.size[1] + railHeight / 2, 0]} castShadow>
+          <boxGeometry args={bridgeRunsAlongX ? [module.size[0], railHeight, 0.1] : [0.1, railHeight, module.size[2]]} />
+          <AnimatedLambert tone={tone} theme={theme} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function ZonePlatform({ module, zone, theme, selected, reducedMotion, reactionSequence, onSelect }: {
+  module: WorldModule; zone: ZoneId; theme: Props['theme']; selected: boolean; reducedMotion: boolean;
+  reactionSequence: number; onSelect: () => void;
+}) {
+  const group = useRef<Group>(null);
+  const moss = useRef<MeshLambertMaterial>(null);
+  const [hovered, setHovered] = useState(false);
+  useFrame((_state, delta) => {
+    if (!group.current || !moss.current) return;
+    const active = hovered || selected;
+    const lift = active && !reducedMotion ? 0.04 : 0;
+    group.current.position.y = MathUtils.damp(group.current.position.y, module.transform.position[1] + lift, 18, delta);
+    const palette = theme === 'night' ? NIGHT : DAY;
+    const target = new Color(active ? palette.coral : palette.moss);
+    moss.current.color.lerp(target, 1 - Math.exp(-delta * 13));
+  });
+  return (
+    <group ref={group} position={module.transform.position} rotation={[0, module.transform.quarterTurns * Math.PI / 2, 0]}>
+      <PlatformBody
+        module={module}
+        theme={theme}
+        mossRef={moss}
+        interactive
+        onSelect={onSelect}
+        onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { setHovered(false); document.body.style.cursor = ''; }}
+      />
+      {zone === 'experiments' && [-0.7, 0, 0.7].map((x, index) => (
+        <ReactionBlock key={x} x={x} index={index} active={selected} sequence={reactionSequence} reducedMotion={reducedMotion} theme={theme} />
+      ))}
+    </group>
+  );
+}
+
+function ReactionBlock({ x, index, active, sequence, reducedMotion, theme }: {
+  x: number; index: number; active: boolean; sequence: number; reducedMotion: boolean; theme: Props['theme'];
+}) {
+  const ref = useRef<Mesh>(null);
+  const elapsed = useRef(1);
+  const { invalidate } = useThree();
+  useEffect(() => { if (active) { elapsed.current = -index * .055; invalidate(); } }, [active, index, invalidate, sequence]);
+  useFrame((_state, delta) => {
+    if (!ref.current) return;
+    elapsed.current += delta;
+    const progress = Math.min(1, Math.max(0, elapsed.current / .55));
+    ref.current.position.y = .28 + (reducedMotion ? 0 : Math.sin(progress * Math.PI) * .38);
+    if (progress < 1) invalidate();
+  });
+  return <mesh ref={ref} position={[x, .28, .72]} castShadow>
+    <boxGeometry args={[.42, .3, .42]} /><AnimatedLambert tone="olive" theme={theme} />
+  </mesh>;
+}
+
+function StairModule({ module, theme }: { module: WorldModule; theme: Props['theme'] }) {
+  const geometry = useMemo(() => {
+    const steps = getStairSteps(module, WORLD_MAP.nodes);
+    const merged = mergeGeometries(
+      steps.map((step) => {
+        const box = new BoxGeometry(...step.size);
+        box.applyMatrix4(new Matrix4().makeTranslation(...step.position));
+        return box;
+      }),
+      false,
+    );
+    return merged ?? new BoxGeometry(1, 1, 1);
+  }, [module]);
+  return (
+    <group position={module.transform.position} rotation={[0, module.transform.quarterTurns * Math.PI / 2, 0]}>
+      <mesh geometry={geometry} castShadow receiveShadow>
+        <AnimatedLambert tone="structure" theme={theme} />
+      </mesh>
+    </group>
+  );
+}
+
+type TonedPart<Tone extends string = PaletteKey> = {
+  position: [number, number, number];
+  size: [number, number, number];
+  rotation?: [number, number, number];
+  tone: Tone;
+};
+type RuinPart = TonedPart;
+
+type TowerDesign = 'keep' | 'archive' | 'beacon' | 'monument';
+
+function monumentExteriorParts(height: number, depth: number): readonly RuinPart[] {
+  return [
+    { position: [0, 0.35, depth / 2 + 0.01], size: [0.4, 0.52, 0.06], tone: 'shadow' },
+    { position: [-0.28, 0.48, depth / 2 + 0.04], size: [0.16, 0.62, 0.2], tone: 'structure' },
+    { position: [0.28, 0.48, depth / 2 + 0.04], size: [0.16, 0.62, 0.2], tone: 'structure' },
+    { position: [0, 0.84, depth / 2 + 0.05], size: [0.58, 0.12, 0.22], tone: 'structure' },
+    { position: [0, height * 0.58, 0], size: [1.08, 0.14, depth * 1.08], tone: 'structure' },
+  ];
+}
+
+function keepExteriorParts(height: number, depth: number): readonly RuinPart[] {
+  return [
+    { position: [0, 0.28, depth / 2 + 0.01], size: [0.36, 0.44, 0.06], tone: 'shadow' },
+    { position: [-0.26, 0.4, depth / 2 + 0.04], size: [0.14, 0.54, 0.18], tone: 'structure' },
+    { position: [0.26, 0.4, depth / 2 + 0.04], size: [0.14, 0.54, 0.18], tone: 'structure' },
+    { position: [0, 0.7, depth / 2 + 0.05], size: [0.52, 0.1, 0.2], tone: 'structure' },
+    { position: [0, height * 0.55, 0], size: [1.08, 0.16, depth * 1.08], tone: 'structure' },
+  ];
+}
+
+function archiveExteriorParts(height: number, depth: number): readonly RuinPart[] {
+  return [
+    { position: [0, 0.4, depth / 2 + 0.01], size: [0.32, 0.62, 0.06], tone: 'shadow' },
+    { position: [-0.22, 0.55, depth / 2 + 0.04], size: [0.12, 0.72, 0.16], tone: 'structure' },
+    { position: [0.22, 0.55, depth / 2 + 0.04], size: [0.12, 0.72, 0.16], tone: 'structure' },
+    { position: [0, 0.92, depth / 2 + 0.05], size: [0.48, 0.1, 0.18], tone: 'structure' },
+    { position: [0.32, height * 0.32, depth / 2 + 0.02], size: [0.08, 0.08, 0.04], tone: 'shadow' },
+    { position: [0.32, height * 0.38, depth / 2 + 0.02], size: [0.08, 0.08, 0.04], tone: 'shadow' },
+    { position: [0.32, height * 0.44, depth / 2 + 0.02], size: [0.08, 0.08, 0.04], tone: 'shadow' },
+    { position: [0, height * 0.58, 0], size: [1.1, 0.14, depth * 1.1], tone: 'structure' },
+  ];
+}
+
+function beaconExteriorParts(height: number, depth: number): readonly RuinPart[] {
+  const archY = height * 0.72;
+  const archH = 0.48;
+  const archW = 0.34;
+  const pillarW = 0.1;
+  const pillarX = archW / 2 + pillarW / 2;
+  return [
+    { position: [0, archY, depth / 2 + 0.01], size: [archW, archH, 0.06], tone: 'shadow' },
+    { position: [-pillarX, archY, depth / 2 + 0.04], size: [pillarW, archH, 0.16], tone: 'structure' },
+    { position: [pillarX, archY, depth / 2 + 0.04], size: [pillarW, archH, 0.16], tone: 'structure' },
+    { position: [0, height * 0.5, 0], size: [1.1, 0.14, depth * 1.1], tone: 'structure' },
+    { position: [-0.54, height * 0.35, 0], size: [0.08, 0.22, 0.14], tone: 'structure' },
+    { position: [0.54, height * 0.35, 0], size: [0.08, 0.22, 0.14], tone: 'structure' },
+  ];
+}
+
+function towerExteriorParts(design: TowerDesign, height: number, depth: number): readonly RuinPart[] {
+  switch (design) {
+    case 'keep': return keepExteriorParts(height, depth);
+    case 'archive': return archiveExteriorParts(height, depth);
+    case 'beacon': return beaconExteriorParts(height, depth);
+    case 'monument': return monumentExteriorParts(height, depth);
+  }
+}
+
+/** Every face gets the same slit so lamplight reads from any orbit angle. */
+function mergedWindowBoxes(width: number, depth: number, yValues: readonly number[]): BufferGeometry {
+  const faces: readonly { turn: number; offset: number }[] = [
+    { turn: 0, offset: depth / 2 + 0.012 },
+    { turn: Math.PI / 2, offset: width / 2 + 0.012 },
+    { turn: Math.PI, offset: depth / 2 + 0.012 },
+    { turn: -Math.PI / 2, offset: width / 2 + 0.012 },
+  ];
+  const geometries = yValues.flatMap((y) => faces.map(({ turn, offset }) => {
+    const geometry = new BoxGeometry(0.14, 0.2, 0.02);
+    const transform = new Matrix4().makeRotationY(turn);
+    transform.setPosition(Math.sin(turn) * offset, y, Math.cos(turn) * offset);
+    geometry.applyMatrix4(transform);
+    return geometry;
+  }));
+  return mergeGeometries(geometries) ?? geometries[0]!;
+}
+
+function towerWindowGeometry(design: TowerDesign, width: number, height: number, depth: number): BufferGeometry {
+  switch (design) {
+    case 'keep': return mergedWindowBoxes(width, depth, [height * 0.42, height * 0.68]);
+    case 'archive': return mergedWindowBoxes(width, depth, [height * 0.4, height * 0.53, height * 0.66, height * 0.79]);
+    case 'beacon': return mergedWindowBoxes(width, depth, [height * 0.32, height * 0.46, height * 0.6]);
+    case 'monument': return mergedWindowBoxes(width, depth, [height * 0.39, height * 0.59, height * 0.76]);
+  }
+}
+
+function TowerModule({ module, theme, active, pageFins, reducedMotion, reactionSequence }: {
+  module: WorldModule; theme: Props['theme']; active: boolean; pageFins: boolean; reducedMotion: boolean; reactionSequence: number;
+}) {
+  const root = useRef<Group>(null);
+  const cap = useRef<Group>(null);
+  const fins = useRef<Group>(null);
+  const merlons = useRef<Group>(null);
+  const beam = useRef<Mesh>(null);
+  const windows = useRef<Mesh>(null);
+  const spin = useRef(0);
+  const elapsed = useRef(1);
+  const nightMix = useRef(theme === 'night' ? 1 : 0);
+  const nightMixFrom = useRef(nightMix.current);
+  const themeElapsed = useRef(0.9);
+  const design = module.id === 'work-tower' ? 'keep'
+    : module.id === 'notes-tower' ? 'archive'
+    : module.id === 'experiments-tower' ? 'monument'
+    : 'beacon';
+  useEffect(() => {
+    if (active) {
+      spin.current += Math.PI * 2;
+      elapsed.current = reducedMotion ? 1 : 0;
+    }
+  }, [active, reactionSequence, reducedMotion]);
+  const { invalidate } = useThree();
+  useEffect(() => {
+    nightMixFrom.current = nightMix.current;
+    themeElapsed.current = 0;
+    invalidate();
+  }, [invalidate, theme]);
+  useFrame(({ clock }, delta) => {
+    if (!reducedMotion) elapsed.current += delta;
+    const t = reducedMotion ? (active ? 1 : 0) : easeOutQuint(Math.min(1, Math.max(0, elapsed.current / 0.7)));
+    const pulse = active && !reducedMotion ? Math.sin(clock.elapsedTime * 3.2) : 0;
+
+    if (root.current) {
+      const squat = design === 'keep' && active ? 1 + pulse * 0.015 : 1;
+      const stretch = (design === 'archive' || design === 'monument') && active ? 1 + pulse * 0.02 : 1;
+      root.current.scale.set(squat, stretch, squat);
+      root.current.rotation.z = design === 'keep' && active && !reducedMotion ? pulse * 0.03 : 0;
+    }
+
+    if (cap.current) {
+      const spinTarget = design === 'beacon' && active
+        ? spin.current + clock.elapsedTime * (reducedMotion ? 0 : 2.4)
+        : spin.current;
+      cap.current.rotation.y = reducedMotion
+        ? spin.current
+        : MathUtils.damp(cap.current.rotation.y, spinTarget, design === 'beacon' ? 4 : 8, delta);
+      const bob = design === 'beacon' && active && !reducedMotion ? 0.08 + pulse * 0.04 : 0;
+      const lift = design === 'keep' && active ? t * 0.12 : design === 'monument' && active ? t * 0.06 : 0;
+      const baseY = design === 'keep' ? module.size[1] + 0.48
+        : design === 'archive' ? module.size[1] + 0.22
+        : design === 'monument' ? module.size[1] + 0.42
+        : module.size[1] + 0.35;
+      cap.current.position.y = baseY + bob + lift;
+      const capScale = design === 'beacon' && active ? 1 + t * 0.12 + pulse * 0.04
+        : design === 'monument' && active ? 1 + pulse * 0.03 : 1;
+      cap.current.scale.setScalar(capScale);
+    }
+
+    if (windows.current) {
+      const nightTarget = theme === 'night' ? 1 : 0;
+      if (reducedMotion) {
+        nightMix.current = nightTarget;
+        themeElapsed.current = 0.9;
+      } else {
+        themeElapsed.current += delta;
+        nightMix.current = MathUtils.lerp(nightMixFrom.current, nightTarget, themeTransitionProgress(themeElapsed.current));
+      }
+      const material = windows.current.material as MeshBasicMaterial;
+      material.color.lerpColors(TOWER_WINDOW_DAY_COLOR, TOWER_WINDOW_NIGHT_COLOR, nightMix.current);
+      material.opacity = MathUtils.lerp(
+        towerWindowGlow(clock.elapsedTime, false, active, reducedMotion),
+        towerWindowGlow(clock.elapsedTime, true, active, reducedMotion),
+        nightMix.current,
+      );
+      if (themeElapsed.current < 0.9) invalidate();
+    }
+
+    if (fins.current) {
+      fins.current.children.forEach((child, index) => {
+        const retracted = 0.02;
+        const wave = active
+          ? (reducedMotion
+            ? 0.38
+            : 0.2 + 0.22 * (0.5 + 0.5 * Math.sin(clock.elapsedTime * 3.6 + index * 1.15)))
+          : retracted;
+        const targetZ = active ? MathUtils.lerp(retracted, wave, Math.max(t, 0.001)) : retracted;
+        child.position.z = reducedMotion ? targetZ : MathUtils.damp(child.position.z, targetZ, 12, delta);
+      });
+    }
+
+    if (merlons.current) {
+      merlons.current.children.forEach((child, index) => {
+        const wave = active ? (reducedMotion ? 0.16 : Math.sin(clock.elapsedTime * 4 + index * 1.2) * 0.14 + t * 0.1) : 0;
+        child.position.y = wave;
+      });
+    }
+
+    if (beam.current) {
+      const show = design === 'beacon' && active;
+      beam.current.visible = show;
+      if (show) {
+        const material = beam.current.material as MeshBasicMaterial;
+        material.opacity = reducedMotion ? 0.35 : 0.2 + Math.abs(pulse) * 0.25;
+        beam.current.scale.y = reducedMotion ? 1 : 0.85 + t * 0.35 + pulse * 0.08;
+      }
+    }
+
+    if (active || elapsed.current < 1) invalidate();
+  });
+  const [width, height, depth] = module.size;
+  const exteriorStatic = useMemo(
+    () => buildRuinMeshes(towerExteriorParts(design, height, depth)),
+    [design, height, depth],
+  );
+  const towerWindows = useMemo(
+    () => towerWindowGeometry(design, width, height, depth),
+    [design, width, height, depth],
+  );
+
+  return (
+    <group
+      ref={root}
+      position={[
+        module.transform.position[0],
+        module.transform.position[1] - DECOR_GROUND_SNAP,
+        module.transform.position[2],
+      ]}
+      rotation={[0, module.transform.quarterTurns * Math.PI / 2, 0]}
+    >
+      <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[width, height, depth]} /><AnimatedLambert tone="surface" theme={theme} />
+      </mesh>
+      {exteriorStatic.map(({ tone, geometry }) => (
+        <mesh key={tone} geometry={geometry} castShadow>
+          <AnimatedLambert tone={tone} theme={theme} />
+        </mesh>
+      ))}
+      <mesh ref={windows} geometry={towerWindows}>
+        <meshBasicMaterial
+          color={theme === 'night' ? TOWER_WINDOW.night : TOWER_WINDOW.day}
+          transparent
+          opacity={towerWindowGlow(0, theme === 'night', false, true)}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {design === 'keep' && (
+        <>
+          <mesh position={[0, height + 0.08, 0]} castShadow>
+            <boxGeometry args={[width * 1.05, 0.16, depth * 1.05]} /><AnimatedLambert tone="structure" theme={theme} />
+          </mesh>
+          <group ref={merlons} position={[0, height + 0.28, 0]}>
+            {([[-1, -1], [-1, 1], [1, -1], [1, 1]] as const).map(([sx, sz]) => (
+              <mesh key={`${sx}-${sz}`} position={[sx * width * 0.38, 0, sz * depth * 0.38]} castShadow>
+                <boxGeometry args={[0.22, 0.28, 0.22]} /><AnimatedLambert tone="structure" theme={theme} />
+              </mesh>
+            ))}
+          </group>
+          <group ref={cap} position={[0, height + 0.48, 0]}>
+            <mesh castShadow>
+              <boxGeometry args={[0.42, 0.14, 0.42]} /><AnimatedLambert tone="coral" theme={theme} />
+            </mesh>
+          </group>
+        </>
+      )}
+
+      {design === 'archive' && (
+        <>
+          <group ref={cap} position={[0, height + 0.22, 0]}>
+            <mesh rotation={[0, Math.PI / 4, 0]} castShadow>
+              <coneGeometry args={[0.42, 0.55, 4]} /><AnimatedLambert tone="coral" theme={theme} />
+            </mesh>
+          </group>
+          {pageFins && (
+            <group ref={fins} position={[0, height * 0.68, depth / 2 + 0.02]}>
+              {[-0.24, 0, 0.24].map((x) => (
+                <mesh key={x} position={[x, 0, 0.02]}>
+                  <boxGeometry args={[0.07, 0.82, 0.28]} /><AnimatedLambert tone="surface" theme={theme} />
+                </mesh>
+              ))}
+            </group>
+          )}
+        </>
+      )}
+
+      {design === 'beacon' && (
+        <>
+          <group ref={cap} position={[0, height + 0.35, 0]}>
+            <mesh castShadow>
+              <cylinderGeometry args={[0.08, 0.36, 0.55, 6]} /><AnimatedLambert tone="coral" theme={theme} />
+            </mesh>
+            <mesh position={[0, 0.38, 0]} castShadow>
+              <octahedronGeometry args={[0.16, 0]} /><AnimatedLambert tone="coral" theme={theme} />
+            </mesh>
+          </group>
+          <mesh ref={beam} position={[0, height + 1.1, 0]} visible={false}>
+            <cylinderGeometry args={[0.04, 0.18, 1.6, 6]} />
+            <meshBasicMaterial color={(theme === 'night' ? NIGHT : DAY).coral} transparent opacity={0} depthWrite={false} />
+          </mesh>
+        </>
+      )}
+
+      {design === 'monument' && (
+        <group ref={cap} position={[0, height + 0.42, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.52, 0.18, 0.52]} /><AnimatedLambert tone="structure" theme={theme} />
+          </mesh>
+          <mesh position={[0, 0.22, 0]} castShadow scale={[1, 0.62, 1]}>
+            <sphereGeometry args={[0.3, 8, 6]} /><AnimatedLambert tone="coral" theme={theme} />
+          </mesh>
+        </group>
+      )}
+    </group>
+  );
+}
+
+const ISLAND_RUIN_DESIGNS: Record<string, readonly RuinPart[]> = {
+  'central-ruin': [
+    { position: [0, 0.18, 0], size: [0.92, 0.36, 0.92], tone: 'structure' },
+    { position: [0.06, 0.58, -0.04], size: [0.52, 0.62, 0.52], tone: 'structure' },
+    { position: [0.22, 0.38, 0.38], size: [0.48, 0.14, 0.68], rotation: [0.22, 0.45, 0.28], tone: 'dirt' },
+    { position: [-0.28, 0.1, 0.3], size: [0.24, 0.16, 0.24], tone: 'dirt' },
+  ],
+  'work-ruin': [
+    { position: [-0.3, 0.44, 0], size: [0.24, 0.88, 0.24], tone: 'structure' },
+    { position: [0.32, 0.3, 0.06], size: [0.24, 0.6, 0.24], tone: 'structure' },
+    { position: [0.02, 0.82, 0.02], size: [0.78, 0.2, 0.3], rotation: [0.32, 0.15, 0.38], tone: 'structure' },
+    { position: [0.35, 0.12, -0.28], size: [0.32, 0.14, 0.28], rotation: [0, 0.6, 0.12], tone: 'dirt' },
+  ],
+  'notes-ruin': [
+    { position: [-0.34, 0.34, 0], size: [0.14, 0.68, 0.14], tone: 'shadow' },
+    { position: [0, 0.08, 0], size: [0.78, 0.14, 0.58], tone: 'structure' },
+    { position: [0.06, 0.24, -0.05], size: [0.7, 0.12, 0.52], rotation: [0.1, -0.2, 0.18], tone: 'surface' },
+    { position: [-0.08, 0.42, 0.06], size: [0.58, 0.1, 0.44], rotation: [-0.08, 0.35, 0.24], tone: 'structure' },
+    { position: [0.28, 0.14, 0.22], size: [0.22, 0.12, 0.22], tone: 'dirt' },
+  ],
+  'about-ruin': [
+    { position: [0, 0.22, 0], size: [0.32, 0.44, 0.32], tone: 'structure' },
+    { position: [0.12, 0.58, 0.06], size: [0.28, 0.52, 0.28], tone: 'structure' },
+    { position: [-0.2, 0.38, -0.18], size: [0.38, 0.18, 0.28], rotation: [0.2, 0.5, 0.15], tone: 'dirt' },
+    { position: [0.05, 0.92, -0.08], size: [0.36, 0.12, 0.36], rotation: [0.15, -0.25, 0.35], tone: 'structure' },
+  ],
+};
+
+function buildRuinMeshes<Tone extends string>(parts: readonly TonedPart<Tone>[], excludeIndex?: number) {
+  const byTone = new Map<Tone, BufferGeometry[]>();
+  parts.forEach((part, index) => {
+    if (index === excludeIndex) return;
+    const geometry = new BoxGeometry(...part.size);
+    const matrix = new Matrix4().makeRotationFromEuler(new Euler(...(part.rotation ?? [0, 0, 0])));
+    matrix.setPosition(...part.position);
+    geometry.applyMatrix4(matrix);
+    const list = byTone.get(part.tone) ?? [];
+    list.push(geometry);
+    byTone.set(part.tone, list);
+  });
+  return [...byTone.entries()].map(([tone, geometries]) => ({
+    tone,
+    geometry: mergeGeometries(geometries) ?? geometries[0]!,
+  }));
+}
+
+function IslandRuin({ module, theme }: { module: WorldModule; theme: Props['theme'] }) {
+  const parts = ISLAND_RUIN_DESIGNS[module.id] ?? ISLAND_RUIN_DESIGNS['central-ruin'];
+  const merged = useMemo(() => buildRuinMeshes(parts), [parts]);
+  return (
+    <group
+      position={[
+        module.transform.position[0],
+        module.transform.position[1] - DECOR_GROUND_SNAP,
+        module.transform.position[2],
+      ]}
+      rotation={[0, module.transform.quarterTurns * Math.PI / 2, 0]}
+    >
+      {merged.map(({ tone, geometry }) => (
+        <mesh key={tone} geometry={geometry} castShadow>
+          <AnimatedLambert tone={tone} theme={theme} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function HabitatSea({ theme, reducedMotion }: { theme: Props['theme']; reducedMotion: boolean }) {
+  const surface = useRef<Mesh>(null);
+  const { invalidate } = useThree();
+  useEffect(() => { invalidate(); }, [invalidate, reducedMotion]);
+  useFrame(({ clock }) => {
+    if (!surface.current || reducedMotion) {
+      if (surface.current && reducedMotion) {
+        surface.current.position.y = WORLD_WATER_CENTER_Y;
+        const material = surface.current.material as MeshLambertMaterial;
+        material.opacity = 0.9;
+        material.transparent = true;
+      }
+      return;
+    }
+    surface.current.position.y = WORLD_WATER_CENTER_Y + Math.sin(clock.elapsedTime * 1.4) * 0.02;
+    const material = surface.current.material as MeshLambertMaterial;
+    material.opacity = 0.88 + Math.sin(clock.elapsedTime * 1.1) * 0.05;
+    material.transparent = true;
+    invalidate();
+  });
+  return (
+    <mesh ref={surface} position={[0, WORLD_WATER_CENTER_Y, 0]} receiveShadow>
+      <boxGeometry args={[22, WORLD_WATER_THICKNESS, 22]} />
+      <AnimatedLambert tone="water" theme={theme} transparent opacity={0.9} depthWrite={false} />
+    </mesh>
+  );
+}
+
+function Water({ module, theme, reducedMotion }: { module: WorldModule; theme: Props['theme']; reducedMotion: boolean }) {
+  const surface = useRef<Mesh>(null);
+  const ripple = useRef<Mesh>(null);
+  const [pulse, setPulse] = useState(0);
+  const progress = useRef(1);
+  useEffect(() => { progress.current = 0; }, [pulse]);
+  const { invalidate } = useThree();
+  useEffect(() => { invalidate(); }, [invalidate, pulse]);
+  useFrame(({ clock }, delta) => {
+    if (surface.current && !reducedMotion) {
+      surface.current.position.y = module.size[1] / 2 + Math.sin(clock.elapsedTime * 1.4) * 0.025;
+      const material = surface.current.material as MeshLambertMaterial;
+      material.opacity = 0.88 + Math.sin(clock.elapsedTime * 1.1) * 0.06;
+      material.transparent = true;
+      invalidate();
+    }
+    if (!ripple.current) return;
+    progress.current = Math.min(1, progress.current + (reducedMotion ? 1 : delta / 0.7));
+    const scale = 0.2 + easeOutQuint(progress.current) * 2.3;
+    ripple.current.scale.setScalar(scale);
+    const material = ripple.current.material as MeshBasicMaterial;
+    material.opacity = (1 - progress.current) * 0.65;
+    if (progress.current < 1) invalidate();
+  });
+  const fallSteps = [
+    { position: [1.6, 0.55, -1.35] as const, size: [0.55, 0.12, 0.55] as const },
+    { position: [1.85, 0.2, -1.05] as const, size: [0.45, 0.35, 0.2] as const },
+    { position: [1.95, -0.05, -0.7] as const, size: [0.4, 0.2, 0.35] as const },
+  ];
+  return (
+    <group position={module.transform.position}>
+      <mesh
+        ref={surface}
+        position={[0, module.size[1] / 2, 0]}
+        receiveShadow
+        onClick={(event) => { event.stopPropagation(); setPulse((value) => value + 1); }}
+      >
+        <boxGeometry args={module.size} /><AnimatedLambert tone="water" theme={theme} transparent opacity={0.92} />
+      </mesh>
+      {fallSteps.map((step, index) => (
+        <mesh key={index} position={[...step.position]} castShadow receiveShadow>
+          <boxGeometry args={[...step.size]} /><AnimatedLambert tone="water" theme={theme} transparent opacity={0.8} />
+        </mesh>
+      ))}
+      <mesh ref={ripple} position={[0, module.size[1] + 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.43, 0.5, 12]} /><meshBasicMaterial color={NIGHT.coral} transparent opacity={0} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
+type TreeKind = 'pine' | 'bush';
+const TREE_DEFS: readonly { position: GridPoint; kind: TreeKind }[] = [];
+
+function InstancedTrees({ theme, reducedMotion }: { theme: Props['theme']; reducedMotion: boolean }) {
+  if (TREE_DEFS.length === 0) return null;
+  const pineCrowns = useRef<InstancedMesh>(null);
+  const bushCrowns = useRef<InstancedMesh>(null);
+  const trunks = useRef<InstancedMesh>(null);
+  const object = useMemo(() => new Object3D(), []);
+  const pointerSmooth = useRef({ x: 0, y: 0 });
+  const pines = useMemo(() => TREE_DEFS.filter((item) => item.kind === 'pine'), []);
+  const bushes = useMemo(() => TREE_DEFS.filter((item) => item.kind === 'bush'), []);
+  useFrame((state, delta) => {
+    pointerSmooth.current.x = MathUtils.damp(pointerSmooth.current.x, state.pointer.x, 5, delta);
+    pointerSmooth.current.y = MathUtils.damp(pointerSmooth.current.y, state.pointer.y, 5, delta);
+    const wind = reducedMotion ? 0 : Math.sin(state.clock.elapsedTime * 1.2) * 0.03;
+    pines.forEach(({ position: [x, y, z] }, index) => {
+      object.position.set(x, y + 0.95, z);
+      object.rotation.set(
+        reducedMotion ? 0 : -pointerSmooth.current.y * 0.03 + wind,
+        index * 0.4,
+        reducedMotion ? 0 : -pointerSmooth.current.x * 0.035,
+      );
+      object.scale.setScalar(0.85 + (index % 2) * 0.1);
+      object.updateMatrix();
+      pineCrowns.current?.setMatrixAt(index, object.matrix);
+      object.position.set(x, y + 0.28, z);
+      object.rotation.set(0, 0, 0);
+      object.scale.set(0.14, 0.55, 0.14);
+      object.updateMatrix();
+      trunks.current?.setMatrixAt(index, object.matrix);
+    });
+    bushes.forEach(({ position: [x, y, z] }, index) => {
+      object.position.set(x, y + 0.38, z);
+      object.rotation.set(0, index * 0.55, reducedMotion ? 0 : wind * 1.4);
+      object.scale.setScalar(0.55 + (index % 3) * 0.08);
+      object.updateMatrix();
+      bushCrowns.current?.setMatrixAt(index, object.matrix);
+      object.position.set(x, y + 0.18, z);
+      object.rotation.set(0, 0, 0);
+      object.scale.set(0.12, 0.28, 0.12);
+      object.updateMatrix();
+      trunks.current?.setMatrixAt(pines.length + index, object.matrix);
+    });
+    if (pineCrowns.current) pineCrowns.current.instanceMatrix.needsUpdate = true;
+    if (bushCrowns.current) bushCrowns.current.instanceMatrix.needsUpdate = true;
+    if (trunks.current) trunks.current.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <>
+      <instancedMesh ref={trunks} args={[undefined, undefined, TREE_DEFS.length]} castShadow>
+        <boxGeometry args={[1, 1, 1]} /><AnimatedLambert tone="shadow" theme={theme} />
+      </instancedMesh>
+      <instancedMesh ref={pineCrowns} args={[undefined, undefined, pines.length]} castShadow>
+        <coneGeometry args={[0.42, 1.45, 5]} /><AnimatedLambert tone="olive" theme={theme} />
+      </instancedMesh>
+      <instancedMesh ref={bushCrowns} args={[undefined, undefined, bushes.length]} castShadow>
+        <dodecahedronGeometry args={[0.42, 0]} /><AnimatedLambert tone="olive" theme={theme} />
+      </instancedMesh>
+    </>
+  );
+}
+
+function Traveler({ nodeId, path, phase, theme, reducedMotion }: {
+  nodeId: string; path: readonly string[]; phase: ExperiencePhase; theme: Props['theme']; reducedMotion: boolean;
+}) {
+  const ref = useRef<Group>(null);
+  const target = useMemo(() => {
+    const node = WORLD_MAP.nodes.find((item) => item.id === nodeId)!;
+    return new Vector3(node.position[0], node.position[1] + 0.48, node.position[2]);
+  }, [nodeId]);
+  useLayoutEffect(() => { if (ref.current && ref.current.position.lengthSq() === 0) ref.current.position.copy(target); }, [target]);
+  const { invalidate } = useThree();
+  useEffect(() => {
+    if (reducedMotion || phase !== 'explore') return;
+    const timer = window.setInterval(invalidate, 120);
+    return () => window.clearInterval(timer);
+  }, [invalidate, phase, reducedMotion]);
+  useFrame(({ clock }, delta) => {
+    if (!ref.current) return;
+    const difference = target.clone().sub(ref.current.position);
+    if (difference.lengthSq() > 0.0001) {
+      ref.current.rotation.y = Math.atan2(difference.x, difference.z);
+      ref.current.position.lerp(target, reducedMotion ? 1 : 1 - Math.exp(-delta * 22));
+    }
+    const walking = phase === 'travelling';
+    ref.current.position.y = target.y + (reducedMotion ? 0 : Math.sin(clock.elapsedTime * (walking ? 16 : 2.2)) * (walking ? 0.055 : 0.012));
+    ref.current.rotation.z = reducedMotion ? 0 : MathUtils.damp(ref.current.rotation.z, walking ? 0.08 : 0, 10, delta);
+    if (walking || difference.lengthSq() > .0001) invalidate();
+  });
+  return (
+    <>
+      {path.slice(1, 5).map((nodeId, index) => {
+        const node = WORLD_MAP.nodes.find((item) => item.id === nodeId)!;
+        return <mesh key={nodeId} position={[node.position[0], node.position[1] + 0.275, node.position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[0.22 + index * 0.025, 0.22 + index * 0.025]} /><AnimatedLambert tone="coral" theme={theme} />
+        </mesh>;
+      })}
+      <group ref={ref}>
+        <mesh position={[0, 0.26, 0]} castShadow><cylinderGeometry args={[0.16, 0.22, 0.48, 6]} /><AnimatedLambert tone="coral" theme={theme} /></mesh>
+        <mesh position={[0, 0.64, 0]} castShadow><dodecahedronGeometry args={[0.18, 0]} /><AnimatedLambert tone="head" theme={theme} /></mesh>
+      </group>
+    </>
+  );
+}
+
+const HOBBIES_CAROUSEL_POSITION: [number, number, number] = [0, -0.25, 7];
+const HOBBIES_CAROUSEL_SCALE = 1.25;
+const HOBBIES_CAROUSEL_SPIN_SPEED = 0.25;
+const HOBBIES_CAROUSEL_TICK_MS = 50;
+/** Bulbs sit proud of the 0.53 rim band so the lit state reads from any orbit angle. */
+const HOBBIES_CAROUSEL_BULBS = 10;
+const HOBBIES_CAROUSEL_BULB_RADIUS = 0.59;
+
+/** Fairground colours, deliberately outside the habitat's muted palette. */
+const CAROUSEL_DAY = {
+  red: '#e8253a', cream: '#f7f1e6', rod: '#cdb98f',
+  horseBlue: '#7fb2e0', horseYellow: '#f2c31e', horsePink: '#ef6ba8', horseGreen: '#4e8f4a',
+};
+const CAROUSEL_NIGHT = {
+  red: '#a92a3c', cream: '#c8c0ad', rod: '#8a7c5f',
+  horseBlue: '#5a82a8', horseYellow: '#b08f2a', horsePink: '#a85078', horseGreen: '#3c6b3a',
+};
+type CarouselTone = keyof typeof CAROUSEL_DAY;
+const carouselTone = (tone: CarouselTone) => ({ day: CAROUSEL_DAY[tone], night: CAROUSEL_NIGHT[tone] });
+const CAROUSEL_BULB = { day: '#fff3c4', night: '#ffe9a8' };
+
+type CarouselPart = TonedPart<CarouselTone>;
+
+const HOBBIES_CAROUSEL_HORSES: readonly { angle: number; tone: CarouselTone }[] = [
+  { angle: Math.PI * 0.25, tone: 'horseBlue' },
+  { angle: Math.PI * 0.75, tone: 'horseYellow' },
+  { angle: Math.PI * 1.25, tone: 'horsePink' },
+  { angle: Math.PI * 1.75, tone: 'horseGreen' },
+];
+
+function carouselCanopyParts(): CarouselPart[] {
+  return Array.from({ length: 8 }, (_unused, index): CarouselPart => {
+    const angle = (index / 8) * Math.PI * 2;
+    return {
+      position: [Math.cos(angle) * 0.25, 1.16, Math.sin(angle) * 0.25],
+      rotation: [0, -angle, -0.42],
+      size: [0.58, 0.07, 0.38],
+      tone: index % 2 === 0 ? 'red' : 'cream',
+    };
+  });
+}
+
+function carouselBulbParts(): CarouselPart[] {
+  return Array.from({ length: HOBBIES_CAROUSEL_BULBS }, (_unused, index): CarouselPart => {
+    const angle = (index / HOBBIES_CAROUSEL_BULBS) * Math.PI * 2;
+    return {
+      position: [
+        Math.cos(angle) * HOBBIES_CAROUSEL_BULB_RADIUS,
+        0.98,
+        Math.sin(angle) * HOBBIES_CAROUSEL_BULB_RADIUS,
+      ],
+      rotation: [0, -angle, 0],
+      size: [0.08, 0.08, 0.08],
+      tone: 'cream',
+    };
+  });
+}
+
+function carouselRiggingParts(): CarouselPart[] {
+  return HOBBIES_CAROUSEL_HORSES.map(({ angle }): CarouselPart => ({
+    position: [Math.cos(angle) * 0.31, 0.73, Math.sin(angle) * 0.31],
+    size: [0.03, 0.58, 0.03],
+    tone: 'rod',
+  }));
+}
+
+function carouselHorseParts(angle: number, tone: CarouselTone): CarouselPart[] {
+  const radius = 0.31;
+  const baseY = 0.44;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const limbs: readonly { offset: [number, number, number]; size: [number, number, number] }[] = [
+    { offset: [0, 0, 0], size: [0.1, 0.14, 0.28] },
+    { offset: [0, 0.1, 0.13], size: [0.08, 0.16, 0.08] },
+    { offset: [0, 0.15, 0.18], size: [0.07, 0.07, 0.11] },
+    { offset: [0, -0.11, 0.09], size: [0.05, 0.14, 0.05] },
+    { offset: [0, -0.11, -0.09], size: [0.05, 0.14, 0.05] },
+    { offset: [0, 0.04, -0.16], size: [0.06, 0.12, 0.05] },
+  ];
+  return limbs.map(({ offset, size }): CarouselPart => ({
+    position: [
+      cos * (radius + offset[0]) - sin * offset[2],
+      baseY + offset[1],
+      sin * (radius + offset[0]) + cos * offset[2],
+    ],
+    rotation: [0, -angle, 0],
+    size,
+    tone,
+  }));
+}
+
+function HobbiesCarousel({ active, sequence, theme, reducedMotion, onSelect }: {
+  active: boolean; sequence: number; theme: Props['theme']; reducedMotion: boolean; onSelect: () => void;
+}) {
+  const rotor = useRef<Group>(null);
+  const bulbs = useRef<Mesh>(null);
+  const bulbMaterial = useRef<MeshBasicMaterial>(null);
+  const elapsed = useRef(0);
+  const { invalidate } = useThree();
+  const bulbGeometry = useMemo(() => buildRuinMeshes(carouselBulbParts())[0]!.geometry, []);
+  const canopy = useMemo(() => buildRuinMeshes(carouselCanopyParts()), []);
+  const rigging = useMemo(() => buildRuinMeshes(carouselRiggingParts()), []);
+  const horses = useMemo(
+    () => buildRuinMeshes(
+      HOBBIES_CAROUSEL_HORSES.flatMap(({ angle, tone }) => carouselHorseParts(angle, tone)),
+    ),
+    [],
+  );
+
+  useEffect(() => {
+    if (active) elapsed.current = 0;
+    invalidate();
+  }, [active, invalidate, sequence]);
+
+  // The idle spin drives the demand frameloop itself, so it ticks well below display
+  // rate: 0.25 rad/s advances under a degree per tick and the rest of the scene stays idle.
+  useEffect(() => {
+    if (reducedMotion) return undefined;
+    const timer = window.setInterval(invalidate, HOBBIES_CAROUSEL_TICK_MS);
+    return () => window.clearInterval(timer);
+  }, [invalidate, reducedMotion]);
+
+  useFrame((_state, delta) => {
+    if (!reducedMotion) {
+      elapsed.current += delta;
+      // Negative yaw reads as clockwise from the orthographic camera looking down.
+      if (rotor.current) rotor.current.rotation.y -= delta * HOBBIES_CAROUSEL_SPIN_SPEED;
+    }
+    const opacity = carouselLightOpacity(elapsed.current, active, reducedMotion);
+    if (bulbMaterial.current) bulbMaterial.current.opacity = opacity;
+    if (bulbs.current) bulbs.current.visible = opacity > 0.02;
+  });
+
+  return (
+    <group
+      position={HOBBIES_CAROUSEL_POSITION}
+      scale={HOBBIES_CAROUSEL_SCALE}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect();
+      }}
+      onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
+      onPointerOut={() => { document.body.style.cursor = ''; }}
+    >
+      <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.58, 0.58, 0.1, 10]} />
+        <AnimatedLambert tone={carouselTone('red')} theme={theme} />
+      </mesh>
+      <mesh position={[0, 0.14, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.46, 0.46, 0.08, 10]} />
+        <AnimatedLambert tone={carouselTone('cream')} theme={theme} />
+      </mesh>
+      <mesh position={[0, 0.6, 0]} castShadow>
+        <boxGeometry args={[0.1, 0.84, 0.1]} />
+        <AnimatedLambert tone={carouselTone('cream')} theme={theme} />
+      </mesh>
+      <group ref={rotor}>
+        <mesh position={[0, 1.02, 0]} castShadow>
+          <cylinderGeometry args={[0.53, 0.53, 0.15, 10]} />
+          <AnimatedLambert tone={carouselTone('red')} theme={theme} />
+        </mesh>
+        {canopy.map(({ tone, geometry }) => (
+          <mesh key={`canopy-${tone}`} geometry={geometry} castShadow>
+            <AnimatedLambert tone={carouselTone(tone)} theme={theme} />
+          </mesh>
+        ))}
+        {rigging.map(({ tone, geometry }) => (
+          <mesh key={`rigging-${tone}`} geometry={geometry}>
+            <AnimatedLambert tone={carouselTone(tone)} theme={theme} />
+          </mesh>
+        ))}
+        {horses.map(({ tone, geometry }) => (
+          <mesh key={`horse-${tone}`} geometry={geometry} castShadow>
+            <AnimatedLambert tone={carouselTone(tone)} theme={theme} />
+          </mesh>
+        ))}
+        <mesh ref={bulbs} geometry={bulbGeometry} visible={false}>
+          <meshBasicMaterial
+            ref={bulbMaterial}
+            color={theme === 'night' ? CAROUSEL_BULB.night : CAROUSEL_BULB.day}
+            transparent
+            opacity={0}
+            depthWrite={false}
+          />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function AboutSignal({ active, sequence, theme, reducedMotion }: {
+  active: boolean; sequence: number; theme: Props['theme']; reducedMotion: boolean;
+}) {
+  const ring = useRef<Mesh>(null);
+  const elapsed = useRef(1);
+  const { invalidate } = useThree();
+  useEffect(() => { if (active) { elapsed.current = 0; invalidate(); } }, [active, invalidate, sequence]);
+  useFrame((_state, delta) => {
+    if (!ring.current) return;
+    if (!reducedMotion) elapsed.current += delta;
+    const { scale, opacity } = aboutSignalPose(elapsed.current, active, reducedMotion);
+    ring.current.scale.setScalar(scale);
+    (ring.current.material as MeshBasicMaterial).opacity = opacity;
+    if (active && !reducedMotion && elapsed.current < 0.8) invalidate();
+  });
+  return <mesh ref={ring} position={[8, 4.6, 9]} rotation={[-Math.PI / 2, 0, 0]}>
+    <ringGeometry args={[0.38, 0.43, 16]} /><meshBasicMaterial color={(theme === 'night' ? NIGHT : DAY).coral} transparent opacity={0} depthWrite={false} />
+  </mesh>;
+}
+
+type RuinPiece = {
+  position: [number, number, number];
+  rotation?: [number, number, number];
+  size: [number, number, number];
+  tone: PaletteKey;
+};
+
+const ISLAND_RUINS: readonly RuinPiece[] = [
+  // Home — scattered rubble pile (SE corner, clear of central ruin SW)
+  { position: [1.45, 0.18, 1.65], rotation: [0, 0.35, 0.08], size: [0.7, 0.28, 0.4], tone: 'structure' },
+  { position: [1.75, 0.32, 1.45], rotation: [0.15, -0.4, 0.2], size: [0.35, 0.22, 0.28], tone: 'structure' },
+  { position: [1.15, 0.14, 1.85], rotation: [0, 0.9, -0.1], size: [0.28, 0.16, 0.45], tone: 'dirt' },
+  { position: [1.55, 0.42, 1.75], rotation: [0.25, 0.2, 0.15], size: [0.22, 0.2, 0.22], tone: 'structure' },
+];
+
+function RuinAccents({ theme }: { theme: Props['theme'] }) {
+  const byTone = useMemo(() => {
+    const groups = new Map<PaletteKey, RuinPiece[]>();
+    for (const piece of ISLAND_RUINS) {
+      const list = groups.get(piece.tone) ?? [];
+      list.push(piece);
+      groups.set(piece.tone, list);
+    }
+    return [...groups.entries()];
+  }, []);
+
+  return (
+    <>
+      {byTone.map(([tone, pieces]) => (
+        <RuinInstances key={tone} pieces={pieces} tone={tone} theme={theme} />
+      ))}
+    </>
+  );
+}
+
+function RuinInstances({
+  pieces,
+  tone,
+  theme,
+}: {
+  pieces: readonly RuinPiece[];
+  tone: PaletteKey;
+  theme: Props['theme'];
+}) {
+  const ruins = useRef<InstancedMesh>(null);
+  const object = useMemo(() => new Object3D(), []);
+  useLayoutEffect(() => {
+    if (!ruins.current) return;
+    pieces.forEach((piece, index) => {
+      object.position.set(...piece.position);
+      object.rotation.set(...(piece.rotation ?? [0, 0, 0]));
+      object.scale.set(...piece.size);
+      object.updateMatrix();
+      ruins.current!.setMatrixAt(index, object.matrix);
+    });
+    ruins.current.instanceMatrix.needsUpdate = true;
+  }, [pieces, object]);
+  return (
+    <instancedMesh ref={ruins} args={[undefined, undefined, pieces.length]} castShadow>
+      <boxGeometry args={[1, 1, 1]} />
+      <AnimatedLambert tone={tone} theme={theme} />
+    </instancedMesh>
+  );
+}
+
+export function WorldScene(props: Props) {
+  const worldGroup = useRef<Group>(null);
+  const dusk = useRef(props.theme === 'night' ? 1 : 0);
+  const { gl, invalidate } = useThree();
+  const motionUntil = useRef(0);
+  const activeZone = props.phase === 'arriving' || props.phase === 'opening-window' ? props.targetZone ?? props.selectedZone : props.selectedZone;
+  useEffect(() => {
+    gl.setClearColor(props.theme === 'night' ? NIGHT.sky : DAY.sky, 0);
+    motionUntil.current = props.reducedMotion ? 0 : performance.now() + 950;
+    invalidate();
+  }, [gl, invalidate, props.theme, props.reactionSequence, props.selectedZone, props.reducedMotion]);
+  useFrame((_state, delta) => {
+    if (!worldGroup.current) return;
+    const desired = nearestEquivalentAngle(worldGroup.current.rotation.y, props.rotationAngle);
+    worldGroup.current.rotation.y = props.reducedMotion ? desired : MathUtils.damp(worldGroup.current.rotation.y, desired, 18, delta);
+    if (Math.abs(worldGroup.current.rotation.y - desired) > .001 || performance.now() < motionUntil.current || props.phase === 'travelling') invalidate();
+  });
+
+  const zoneByPlatform: Partial<Record<string, ZoneId>> = {
+    'work-platform': 'work', 'notes-platform': 'field-notes', 'experiments-platform': 'experiments',
+    'hobbies-platform': 'hobbies', 'about-platform': 'about',
+  };
+
+  return (
+    <>
+      <SceneLight theme={props.theme} reducedMotion={props.reducedMotion} dusk={dusk} />
+      <CameraRig selectedZone={props.selectedZone} rotationAngle={props.rotationAngle} reducedMotion={props.reducedMotion} />
+      <LabelProjector worldGroup={worldGroup} onProject={props.onLabelsProject} />
+      <group ref={worldGroup}>
+        <CelestialBodies theme={props.theme} dusk={dusk} />
+        <HabitatSea theme={props.theme} reducedMotion={props.reducedMotion} />
+        {WORLD_MAP.modules.map((module) => {
+          const zone = zoneByPlatform[module.id];
+          if (zone) return <ZonePlatform key={module.id} module={module} zone={zone} theme={props.theme} selected={activeZone === zone} reducedMotion={props.reducedMotion} reactionSequence={props.reactionSequence} onSelect={() => props.onZoneRequest(zone)} />;
+          if (module.kind === 'stair') return <StairModule key={module.id} module={module} theme={props.theme} />;
+          if (module.kind === 'tower') {
+            return (
+              <TowerModule
+                key={module.id}
+                module={module}
+                theme={props.theme}
+                active={
+                  (module.id === 'work-tower' && activeZone === 'work')
+                  || (module.id === 'notes-tower' && activeZone === 'field-notes')
+                  || (module.id === 'experiments-tower' && activeZone === 'experiments')
+                  || (module.id === 'about-tower' && activeZone === 'about')
+                }
+                pageFins={module.id === 'notes-tower'}
+                reducedMotion={props.reducedMotion}
+                reactionSequence={props.reactionSequence}
+              />
+            );
+          }
+          if (module.kind === 'ruin') {
+            return (
+              <IslandRuin
+                key={module.id}
+                module={module}
+                theme={props.theme}
+              />
+            );
+          }
+          if (module.kind === 'water') return <Water key={module.id} module={module} theme={props.theme} reducedMotion={props.reducedMotion} />;
+          return <StaticBox key={module.id} module={module} tone="structure" theme={props.theme} />;
+        })}
+        <HobbiesCarousel
+          active={activeZone === 'hobbies'}
+          sequence={props.reactionSequence}
+          theme={props.theme}
+          reducedMotion={props.reducedMotion}
+          onSelect={() => props.onZoneRequest('hobbies')}
+        />
+        <AboutSignal active={activeZone === 'about'} sequence={props.reactionSequence} theme={props.theme} reducedMotion={props.reducedMotion} />
+        <InstancedTrees theme={props.theme} reducedMotion={props.reducedMotion} />
+        <RuinAccents theme={props.theme} />
+        <Traveler nodeId={props.characterNodeId} path={props.path} phase={props.phase} theme={props.theme} reducedMotion={props.reducedMotion} />
+        <mesh position={[0, -1.15, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[38, 38]} />
+          <shadowMaterial color={new Color((props.theme === 'night' ? NIGHT : DAY).shadow)} opacity={props.theme === 'night' ? 0.42 : 0.19} transparent />
+        </mesh>
+      </group>
+    </>
+  );
+}

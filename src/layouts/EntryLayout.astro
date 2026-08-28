@@ -1,0 +1,23 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title: string;
+  summary: string;
+  meta: string;
+  kind?: 'website' | 'article';
+  image?: string;
+}
+
+const { title, summary, meta, kind = 'article', image = '/og/archive.png' } = Astro.props;
+---
+
+<BaseLayout title={title} description={summary} kind={kind} image={image}>
+  <article class="article-shell">
+    <header class="article-head">
+      <p class="article-meta meta-list">{meta}</p>
+      <h1>{title}</h1>
+    </header>
+    <div class="article-body"><slot /></div>
+  </article>
+</BaseLayout>

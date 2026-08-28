@@ -1,0 +1,15 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Not found" description="That path does not exist in the Living Archive.">
+  <section class="page-intro page-shell">
+    <h1>Not found</h1>
+    <p class="page-404-links"><a href="/index">Index</a> · <a href="/">World</a></p>
+  </section>
+</BaseLayout>
+
+<style>
+  .page-404-links { margin: 1rem 0 0; color: var(--muted-ink); }
+  .page-404-links a { text-decoration: none; }
+</style>
