@@ -34,8 +34,24 @@ import {
   type WorldTheme,
 } from './world-materials';
 import { WORLD_MAP, ZONE_NODES } from './world-map';
-import { coralBeaconGlow, easeOutQuint, nearestEquivalentAngle, rotatePointY, themeTransitionProgress, cameraReframeProgress, carouselLightOpacity, carouselSpinSpeed, CAROUSEL_IDLE_SPIN_SPEED } from './world-motion';
-import type { ExperiencePhase, GridPoint, WorldModule, ZoneId } from './world-types';
+import {
+  applyVegetationTheme,
+  buildVegetationGeometry,
+  deformVegetationGeometry,
+} from './world-vegetation';
+import {
+  aboutSignalPose,
+  cameraReframeProgress,
+  carouselLightOpacity,
+  carouselSpinSpeed,
+  CAROUSEL_IDLE_SPIN_SPEED,
+  coralBeaconGlow,
+  easeOutQuint,
+  nearestEquivalentAngle,
+  rotatePointY,
+  themeTransitionProgress,
+} from './world-motion';
+import type { ExperiencePhase, WorldModule, ZoneId } from './world-types';
 
 export type LabelProjectionHandler = (labels: readonly ProjectedLabel[]) => void;
 
@@ -218,7 +234,7 @@ function NightAmbience({
     <>
       <pointLight position={[-8, 3.4, -1]} intensity={theme === 'night' ? 1.55 : 0} color="#ffb38a" distance={10} />
       <pointLight position={[1, 4.6, -9]} intensity={theme === 'night' ? 1.4 : 0} color="#d7ecff" distance={9} />
-      <pointLight position={[8, 3.8, 9]} intensity={theme === 'night' ? 0.87 : 0} color="#ffc7a1" distance={10} />
+      <pointLight position={[8, 3.8, 9]} intensity={theme === 'night' ? 1.45 : 0} color="#ffc7a1" distance={10} />
     </>
   );
 }
@@ -433,12 +449,6 @@ const ISLAND_RUIN_DESIGNS: Record<string, readonly RuinPart[]> = {
     { position: [0.22, 0.38, 0.38], size: [0.48, 0.14, 0.68], rotation: [0.22, 0.45, 0.28], tone: 'dirt' },
     { position: [-0.28, 0.1, 0.3], size: [0.24, 0.16, 0.24], tone: 'dirt' },
   ],
-  'work-ruin': [
-    { position: [-0.3, 0.44, 0], size: [0.24, 0.88, 0.24], tone: 'structure' },
-    { position: [0.32, 0.3, 0.06], size: [0.24, 0.6, 0.24], tone: 'structure' },
-    { position: [0.02, 0.82, 0.02], size: [0.78, 0.2, 0.3], rotation: [0.32, 0.15, 0.38], tone: 'structure' },
-    { position: [0.35, 0.12, -0.28], size: [0.32, 0.14, 0.28], rotation: [0, 0.6, 0.12], tone: 'dirt' },
-  ],
   'notes-ruin': [
     { position: [-0.34, 0.34, 0], size: [0.14, 0.68, 0.14], tone: 'shadow' },
     { position: [0, 0.08, 0], size: [0.78, 0.14, 0.58], tone: 'structure' },
@@ -554,66 +564,29 @@ function Water({ module, theme, reducedMotion }: { module: WorldModule; theme: P
   );
 }
 
-type TreeKind = 'pine' | 'bush';
-const TREE_DEFS: readonly { position: GridPoint; kind: TreeKind }[] = [];
-
-function InstancedTrees({ theme, reducedMotion }: { theme: Props['theme']; reducedMotion: boolean }) {
-  if (TREE_DEFS.length === 0) return null;
-  const pineCrowns = useRef<InstancedMesh>(null);
-  const bushCrowns = useRef<InstancedMesh>(null);
-  const trunks = useRef<InstancedMesh>(null);
-  const object = useMemo(() => new Object3D(), []);
+function Vegetation({ theme, reducedMotion }: { theme: Props['theme']; reducedMotion: boolean }) {
+  const geometry = useMemo(() => buildVegetationGeometry(), []);
   const pointerSmooth = useRef({ x: 0, y: 0 });
-  const pines = useMemo(() => TREE_DEFS.filter((item) => item.kind === 'pine'), []);
-  const bushes = useMemo(() => TREE_DEFS.filter((item) => item.kind === 'bush'), []);
+  const advanceNightMix = useNightMix(theme, reducedMotion);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
   useFrame((state, delta) => {
     pointerSmooth.current.x = MathUtils.damp(pointerSmooth.current.x, state.pointer.x, 5, delta);
     pointerSmooth.current.y = MathUtils.damp(pointerSmooth.current.y, state.pointer.y, 5, delta);
-    const wind = reducedMotion ? 0 : Math.sin(state.clock.elapsedTime * 1.2) * 0.03;
-    pines.forEach(({ position: [x, y, z] }, index) => {
-      object.position.set(x, y + 0.95, z);
-      object.rotation.set(
-        reducedMotion ? 0 : -pointerSmooth.current.y * 0.03 + wind,
-        index * 0.4,
-        reducedMotion ? 0 : -pointerSmooth.current.x * 0.035,
-      );
-      object.scale.setScalar(0.85 + (index % 2) * 0.1);
-      object.updateMatrix();
-      pineCrowns.current?.setMatrixAt(index, object.matrix);
-      object.position.set(x, y + 0.28, z);
-      object.rotation.set(0, 0, 0);
-      object.scale.set(0.14, 0.55, 0.14);
-      object.updateMatrix();
-      trunks.current?.setMatrixAt(index, object.matrix);
-    });
-    bushes.forEach(({ position: [x, y, z] }, index) => {
-      object.position.set(x, y + 0.38, z);
-      object.rotation.set(0, index * 0.55, reducedMotion ? 0 : wind * 1.4);
-      object.scale.setScalar(0.55 + (index % 3) * 0.08);
-      object.updateMatrix();
-      bushCrowns.current?.setMatrixAt(index, object.matrix);
-      object.position.set(x, y + 0.18, z);
-      object.rotation.set(0, 0, 0);
-      object.scale.set(0.12, 0.28, 0.12);
-      object.updateMatrix();
-      trunks.current?.setMatrixAt(pines.length + index, object.matrix);
-    });
-    if (pineCrowns.current) pineCrowns.current.instanceMatrix.needsUpdate = true;
-    if (bushCrowns.current) bushCrowns.current.instanceMatrix.needsUpdate = true;
-    if (trunks.current) trunks.current.instanceMatrix.needsUpdate = true;
+    deformVegetationGeometry(
+      geometry,
+      state.clock.elapsedTime,
+      pointerSmooth.current,
+      reducedMotion,
+    );
+    applyVegetationTheme(geometry, advanceNightMix(delta));
   });
+
   return (
-    <>
-      <instancedMesh ref={trunks} args={[undefined, undefined, TREE_DEFS.length]} castShadow>
-        <boxGeometry args={[1, 1, 1]} /><AnimatedLambert tone="shadow" theme={theme} />
-      </instancedMesh>
-      <instancedMesh ref={pineCrowns} args={[undefined, undefined, pines.length]} castShadow>
-        <coneGeometry args={[0.42, 1.45, 5]} /><AnimatedLambert tone="olive" theme={theme} />
-      </instancedMesh>
-      <instancedMesh ref={bushCrowns} args={[undefined, undefined, bushes.length]} castShadow>
-        <dodecahedronGeometry args={[0.42, 0]} /><AnimatedLambert tone="olive" theme={theme} />
-      </instancedMesh>
-    </>
+    <mesh geometry={geometry} castShadow>
+      <meshLambertMaterial vertexColors flatShading />
+    </mesh>
   );
 }
 
@@ -852,6 +825,26 @@ function HobbiesCarousel({ active, sequence, theme, reducedMotion, onSelect }: {
   );
 }
 
+function AboutSignal({ active, sequence, theme, reducedMotion }: {
+  active: boolean; sequence: number; theme: Props['theme']; reducedMotion: boolean;
+}) {
+  const ring = useRef<Mesh>(null);
+  const elapsed = useRef(1);
+  const { invalidate } = useThree();
+  useEffect(() => { if (active) { elapsed.current = 0; invalidate(); } }, [active, invalidate, sequence]);
+  useFrame((_state, delta) => {
+    if (!ring.current) return;
+    if (!reducedMotion) elapsed.current += delta;
+    const { scale, opacity } = aboutSignalPose(elapsed.current, active, reducedMotion);
+    ring.current.scale.setScalar(scale);
+    (ring.current.material as MeshBasicMaterial).opacity = opacity;
+    if (active && !reducedMotion && elapsed.current < 0.8) invalidate();
+  });
+  return <mesh ref={ring} position={[8, 4.6, 9]} rotation={[-Math.PI / 2, 0, 0]}>
+    <ringGeometry args={[0.38, 0.43, 16]} /><meshBasicMaterial color={(theme === 'night' ? NIGHT : DAY).coral} transparent opacity={0} depthWrite={false} />
+  </mesh>;
+}
+
 type RuinPiece = {
   position: [number, number, number];
   rotation?: [number, number, number];
@@ -989,7 +982,8 @@ export function WorldScene(props: Props) {
           reducedMotion={props.reducedMotion}
           onSelect={() => props.onZoneRequest('hobbies')}
         />
-        <InstancedTrees theme={props.theme} reducedMotion={props.reducedMotion} />
+        <AboutSignal active={activeZone === 'about'} sequence={props.reactionSequence} theme={props.theme} reducedMotion={props.reducedMotion} />
+        <Vegetation theme={props.theme} reducedMotion={props.reducedMotion} />
         <RuinAccents theme={props.theme} />
         <Traveler nodeId={props.characterNodeId} path={props.path} phase={props.phase} theme={props.theme} reducedMotion={props.reducedMotion} />
         <mesh position={[0, -1.15, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>

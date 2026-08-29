@@ -5,6 +5,7 @@ import {
   estimateTowerDesignBudget,
   towerArchetypeFromModuleId,
 } from './tower-designs';
+import { estimateVegetationBudget } from './world-vegetation';
 
 describe('world performance budget', () => {
   it('stays below the authored desktop and mobile scene limits', () => {
@@ -34,5 +35,16 @@ describe('world performance budget', () => {
     expect(full.drawCalls - base.drawCalls).toBe(towerBudget.drawCalls);
     expect(full.triangles - base.triangles).toBe(towerBudget.triangles);
     expect(towerBudget.drawCalls).toBeGreaterThan(24);
+  });
+
+  it('automatically includes the merged vegetation in the complete scene estimate', () => {
+    const full = estimateSceneBudget(WORLD_MAP);
+    const withoutVegetation = estimateSceneBudget(WORLD_MAP, []);
+    const vegetation = estimateVegetationBudget();
+
+    expect(full.drawCalls - withoutVegetation.drawCalls).toBe(vegetation.drawCalls);
+    expect(full.triangles - withoutVegetation.triangles).toBe(vegetation.triangles);
+    expect(full.drawCalls).toBeLessThanOrEqual(100);
+    expect(full.triangles).toBeLessThanOrEqual(75_000);
   });
 });

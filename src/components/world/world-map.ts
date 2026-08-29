@@ -32,12 +32,11 @@ const modules: WorldModule[] = [
   { id: 'about-stair', kind: 'stair', size: [1, 0.75, 1], transform: transform([8, 0.5, 2]), stairNodeIds: ['about-01', 'about-02'] },
   { id: 'about-bridge', kind: 'bridge', size: [1, 0.25, 3], transform: transform([8, 1, 4]), bridgeNodeIds: ['about-02', 'about-05'] },
   { id: 'about-landing', kind: 'bridge', size: [1, 0.25, 1], transform: transform([8, 1, 6]), bridgeNodeIds: ['about-05', 'about-06'] },
-  { id: 'work-tower', kind: 'tower', size: [1, 2.5, 1], transform: transform([-8, 0, -1]) },
+  { id: 'work-tower', kind: 'tower', size: [1, 2.5, 1], transform: transform([-7, 0, 0], 1) },
   { id: 'notes-tower', kind: 'tower', size: [1, 4.5, 1], transform: transform([1, 1, -9]) },
   { id: 'about-tower', kind: 'tower', size: [1, 3.5, 1], transform: transform([7, 1.5, 8]) },
   { id: 'experiments-tower', kind: 'tower', size: [1, 3.5, 1], transform: transform([8, 1, -1]) },
   { id: 'central-ruin', kind: 'ruin', size: [1, 1, 1], transform: transform([-2, 0.5, -1]) },
-  { id: 'work-ruin', kind: 'ruin', size: [1, 1, 1], transform: transform([-6, 0, 1]) },
   { id: 'notes-ruin', kind: 'ruin', size: [1, 1, 1], transform: transform([-1, 1, -9]) },
   { id: 'about-ruin', kind: 'ruin', size: [1, 1, 1], transform: transform([6, 1, 8]) },
 ];

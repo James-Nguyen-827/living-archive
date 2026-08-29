@@ -47,6 +47,7 @@ The Playwright configuration builds the static site and serves it on `127.0.0.1:
 - `src/components/world/WorldExplorer.tsx` — DOM shell, orbit input, travel timing, history, focus, fallback.
 - `src/components/world/WorldScene.tsx` — R3F sculpture, traveler, projection, reactions, dusk.
 - `src/components/world/world-materials.tsx` — day/night palettes, `AnimatedLambert`, `useNightMix`, tower window colours.
+- `src/components/world/world-vegetation.ts` — authored pine/shrub placements, merged geometry, dusk colours, sway, and budget.
 - `src/components/world/tower-designs.ts` — static tower part layouts and merged window geometry.
 - `src/components/world/tower-modules.tsx` — four zone landmark archetypes.
 - `src/components/world/use-ambient-tick.ts` — shared 50ms demand tick for carousel spin and tower idle motion.
@@ -73,27 +74,40 @@ Identity and publishing placeholders live in `src/config/site.ts`. Do not publis
 
 ## Working-tree caution
 
-The repository was initialized without a base commit; the current branch is `codex/living-archive` and the project files may all appear untracked. Treat every existing file as user work. Do not reset, clean, delete, or mass-reformat the workspace. Do not commit unless the user requests it.
+The repository is tracked and feature work may live in linked worktrees. Treat every existing file and change as user work. Do not reset, clean, delete, or mass-reformat the workspace. Do not commit unless the user requests it.
 
 ## Current handoff status
 
-Impossible-mechanisms tower redesign complete (2026-08-28). The four landmarks are now the Work Gearhouse, Field Notes Pagewell, Experiments Paradox Gate, and About Orrery Beacon. Verification from this pass:
+Project Court gantry ceremony complete (2026-08-28). The four landmarks remain the Work Project Court, Field Notes Pagewell, Experiments Paradox Gate, and About Orrery Beacon. Verification from this pass:
 
-- `npm test -- --run` — 69 passed
-- `npm run check` — 0 errors, warnings, or hints
-- `npm run build` — succeeded; WorldCanvas 242,735 gzip bytes of 307,200
-- Playwright visual/dependency run at three workers — 63 passed, 10 skipped
-- Impeccable detector — no findings
-- `public/world-poster.png` regenerated; responsive, night, fallback, active-tower, and orbit baselines refreshed
+- `npm test -- --run` — 79 passed
+- `npm run validate:world` — 8 passed
+- `npm run check` — 70 files checked with 0 errors, warnings, or hints
+- `npm run build` — succeeded; WorldCanvas 243,446 gzip bytes of 307,200
+- Authored scene estimate — 100 draw calls and 3,848 triangles; merged vegetation contributes 1 draw call and 448 triangles
+- `npx playwright test --workers=3` — 63 passed, 10 skipped
+- `public/world-poster.png` regenerated after gantry motion timing change
 
 Shipped in this pass:
 
-- Four narrative silhouettes: short/dense Gearhouse, tall/hollow Pagewell, wide/porous Paradox Gate, and slender/celestial Orrery Beacon
-- Reversible shared tower state: 1.05s arrival, 0.65s exit, replay on reselection, immediate reduced-motion final poses
-- Held active forms: turned workshop and aligned stair, fanned folios, 0°/45°/90° portal with locked cube, aligned halo with inward beam
-- Authored four-face window placements, merged static materials, instanced Pagewell folios and Paradox frames
-- Archetype-specific scene-budget accounting replaces the old generic six-call-per-tower estimate; the authored scene stays under 100 draw calls and 75k triangles
-- Dedicated desktop reduced-motion baselines for all four active landmark poses
+- Replaced the clipping center-pivot coral bridge with a three-part overhead gantry: center beam plus two end caps, rear cradle, and terrace landing sockets
+- Added a ceremonial Project Court choreography: front terrace unfolds first; at 0.48 progress the rear terrace and gantry rise, travel, extend, and seat together across the court
+- Project Court alone uses `1.4s` arrival and `0.8s` exit via `PROJECT_COURT_REACTION_DURATIONS`; other landmarks keep `1.05s` / `0.65s`
+- Removed neutral gantry hover, tilt, and x-axis roll; the renderer now applies terrace lift/yaw plus gantry position, y-axis yaw, and longitudinal scale directly
+- Added `project-court-gantry.test.ts` to sample 202 arrival/exit poses with oriented bounding boxes, excluding only the neutral cradle and final landing sockets
+- Fixed rear-terrace/gantry collision by syncing rear terrace motion with gantry departure at 0.48 progress
+
+Project Court vegetation continuation (2026-08-28):
+
+- Added five pines and eight shrubs across the central, Work, Field Notes, Experiments, Hobbies, and About platforms without changing topology, paths, labels, content, or landmark interactions
+- Replaced the dormant three-instanced-mesh renderer with one merged low-poly mesh using vertex-coloured dirt trunks, stacked five-sided olive pine crowns, and olive dodecahedron shrubs
+- Added deterministic authored variation, 0.03-unit bounded wind/pointer sway, exact reduced-motion geometry, reversible day/night colours, and automatic one-call scene-budget accounting
+- Added unit coverage for composition, platform footprints, walk-node clearance, geometry, colours, finite bounds, sway, and the complete scene budget
+- Replaced the Work Gearhouse with two unequal L-shaped Project Court wings around a visible diagonal courtyard while preserving the public `work-tower` ID
+- Added staged rear-slab, front-slab, and coral-gantry motion with replay, retargeting, and reduced-motion contracts intact
+- Preserved four-face warm windows, the Work content and topology, the `bridge-sweep` reaction, and the existing palette
+- Removed the obsolete Gearhouse visual baseline and temporary Chromium `debug.log`
+- Inspected the poster plus representative active, day/night, responsive, fallback, and orbit views
 
 The previous Monument Valley tower redesign completed on 2026-08-27 with this verification:
 

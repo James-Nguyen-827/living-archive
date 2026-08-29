@@ -30,15 +30,38 @@ describe('narrative tower designs', () => {
     }
   });
 
-  it('builds the Project Court from two project slabs and one coral bridge', () => {
+  it('builds the Project Court from two socketed terraces and one compact coral gantry', () => {
     const design = towerDesign('project-court', 2.5);
 
     expect(Object.keys(design.assemblies)).toEqual([
       'rear-slab',
       'front-slab',
-      'coral-bridge',
+      'coral-gantry',
     ]);
-    expect(design.assemblies['coral-bridge']?.parts.every((part) => part.tone === 'coral')).toBe(true);
+    const rearSocket = design.assemblies['rear-slab']?.parts.at(-1);
+    const frontSocket = design.assemblies['front-slab']?.parts.at(-1);
+    const gantry = design.assemblies['coral-gantry'];
+
+    expect(rearSocket).toEqual({
+      position: [0.08, 0.13, 0],
+      size: [0.28, 0.1, 0.24],
+      tone: 'structure',
+    });
+    expect(frontSocket).toEqual({
+      position: [0, 0.13, 0.08],
+      size: [0.28, 0.1, 0.24],
+      tone: 'structure',
+    });
+    expect(gantry?.parts).toEqual([
+      { position: [0, 0, 0], size: [0.18, 0.12, 1.29], tone: 'coral' },
+      { position: [0, 0, -0.61], size: [0.28, 0.16, 0.16], tone: 'coral' },
+      { position: [0, 0, 0.61], size: [0.28, 0.16, 0.16], tone: 'coral' },
+    ]);
+    expect(design.staticParts).toContainEqual({
+      position: [-0.54, 2.08, -0.74],
+      size: [0.3, 0.08, 0.28],
+      tone: 'structure',
+    });
 
     const envelope = towerDesignEnvelope(design);
     expect(envelope.width).toBeLessThanOrEqual(1.8);
@@ -49,8 +72,8 @@ describe('narrative tower designs', () => {
   it('keeps the Project Court within the previous Gearhouse scene allowance', () => {
     const budget = estimateTowerDesignBudget('project-court', 2.5);
 
-    expect(budget.drawCalls).toBeLessThanOrEqual(8);
-    expect(budget.triangles).toBeLessThanOrEqual(324);
+    expect(budget.drawCalls).toBe(8);
+    expect(budget.triangles).toBe(324);
   });
 
   it('gives all four landmarks distinct three-dimensional proportions', () => {

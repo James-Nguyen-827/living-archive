@@ -6,9 +6,7 @@ import {
   MathUtils,
   Mesh,
   MeshBasicMaterial,
-  MeshLambertMaterial,
   Object3D,
-  PointLight,
 } from 'three';
 import {
   buildRuinMeshes,
@@ -20,14 +18,7 @@ import {
 } from './tower-designs';
 import {
   AnimatedLambert,
-  DAY,
   DECOR_GROUND_SNAP,
-  NIGHT,
-  ORRERY_BEACON_LIGHT,
-  ORRERY_HUB_GLOW_DAY_COLOR,
-  ORRERY_HUB_GLOW_NIGHT_COLOR,
-  ORRERY_RING_GLOW_DAY_COLOR,
-  ORRERY_RING_GLOW_NIGHT_COLOR,
   TOWER_WINDOW,
   TOWER_WINDOW_DAY_COLOR,
   TOWER_WINDOW_NIGHT_COLOR,
@@ -35,10 +26,8 @@ import {
   type WorldTheme,
 } from './world-materials';
 import {
-  aboutSignalPose,
   advanceTowerReaction,
   orreryBeamPose,
-  orreryBeaconGlow,
   orreryRingPose,
   pageBreathYaw,
   pagewellBookmarkTilt,
@@ -46,8 +35,10 @@ import {
   paradoxCubePose,
   paradoxFrameIdleSpin,
   paradoxFramePose,
+  PROJECT_COURT_REACTION_DURATIONS,
   projectCourtPose,
   towerWindowGlow,
+  type TowerReactionDurations,
   type TowerReactionState,
 } from './world-motion';
 import type { WorldModule } from './world-types';
@@ -64,6 +55,7 @@ function useTowerReaction(
   active: boolean,
   reactionSequence: number,
   reducedMotion: boolean,
+  durations?: TowerReactionDurations,
 ) {
   const state = useRef<TowerReactionState>({
     progress: active ? 1 : 0,
@@ -85,6 +77,7 @@ function useTowerReaction(
       active,
       reactionSequence,
       reducedMotion,
+      durations,
     );
     const target = active ? 1 : 0;
     if (Math.abs(state.current.progress - target) > 0.0001) invalidate();
@@ -169,25 +162,34 @@ function assembly(design: ReturnType<typeof towerDesign>, key: string): TowerAss
 function ProjectCourtTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
   const height = module.size[1];
   const design = useMemo(() => towerDesign('project-court', height), [height]);
-  const reaction = useTowerReaction(active, reactionSequence, reducedMotion);
+  const reaction = useTowerReaction(
+    active,
+    reactionSequence,
+    reducedMotion,
+    PROJECT_COURT_REACTION_DURATIONS,
+  );
   const rearSlab = useRef<Group>(null);
   const frontSlab = useRef<Group>(null);
-  const coralBridge = useRef<Group>(null);
+  const coralGantry = useRef<Group>(null);
   const rearSlabAssembly = assembly(design, 'rear-slab');
   const frontSlabAssembly = assembly(design, 'front-slab');
-  const coralBridgeAssembly = assembly(design, 'coral-bridge');
+  const coralGantryAssembly = assembly(design, 'coral-gantry');
 
-  useFrame(({ clock }) => {
+  useFrame(() => {
     const progress = reaction.current.progress;
     const pose = projectCourtPose(progress);
-    if (rearSlab.current) rearSlab.current.rotation.y = pose.rearSlabYaw;
-    if (frontSlab.current) frontSlab.current.rotation.y = pose.frontSlabYaw;
-    if (coralBridge.current) {
-      const idle = 1 - progress;
-      const hover = reducedMotion ? 0 : Math.sin(clock.elapsedTime * 1.15) * 0.02 * idle;
-      const tilt = reducedMotion ? 0 : Math.sin(clock.elapsedTime * 0.8) * 0.025 * idle;
-      coralBridge.current.rotation.x = pose.bridgeRoll + tilt;
-      coralBridge.current.position.y = coralBridgeAssembly.position[1] + pose.bridgeLift + hover;
+    if (rearSlab.current) {
+      rearSlab.current.rotation.y = pose.rearSlabYaw;
+      rearSlab.current.position.y = rearSlabAssembly.position[1] + pose.rearSlabLift;
+    }
+    if (frontSlab.current) {
+      frontSlab.current.rotation.y = pose.frontSlabYaw;
+      frontSlab.current.position.y = frontSlabAssembly.position[1] + pose.frontSlabLift;
+    }
+    if (coralGantry.current) {
+      coralGantry.current.position.set(...pose.gantryPosition);
+      coralGantry.current.rotation.set(0, pose.gantryYaw, 0);
+      coralGantry.current.scale.set(1, 1, pose.gantryScaleZ);
     }
   });
 
@@ -205,15 +207,12 @@ function ProjectCourtTower({ module, theme, active, reducedMotion, reactionSeque
         <MergedParts parts={frontSlabAssembly.parts} theme={theme} reducedMotion={reducedMotion} />
       </group>
       <group
-        ref={coralBridge}
-        position={[
-          coralBridgeAssembly.position[0],
-          coralBridgeAssembly.position[1] + 0.18,
-          coralBridgeAssembly.position[2],
-        ]}
-        rotation={[Math.PI / 2, 0, 0]}
+        ref={coralGantry}
+        position={[-0.54, 2.2, -0.74]}
+        rotation={[0, Math.PI / 2, 0]}
+        scale={[1, 1, 0.22]}
       >
-        <MergedParts parts={coralBridgeAssembly.parts} theme={theme} reducedMotion={reducedMotion} />
+        <MergedParts parts={coralGantryAssembly.parts} theme={theme} reducedMotion={reducedMotion} />
       </group>
       <TowerWindows parts={design.windows} theme={theme} active={active} reducedMotion={reducedMotion} />
     </TowerPlacement>
@@ -343,49 +342,6 @@ function ParadoxGateTower({ module, theme, active, reducedMotion, reactionSequen
   );
 }
 
-function OrreryVisitRing({
-  active,
-  sequence,
-  theme,
-  reducedMotion,
-  ringY,
-}: {
-  active: boolean;
-  sequence: number;
-  theme: WorldTheme;
-  reducedMotion: boolean;
-  ringY: number;
-}) {
-  const ring = useRef<Mesh>(null);
-  const elapsed = useRef(1);
-  const { invalidate } = useThree();
-  useEffect(() => {
-    if (active) {
-      elapsed.current = 0;
-      invalidate();
-    }
-  }, [active, invalidate, sequence]);
-  useFrame((_state, delta) => {
-    if (!ring.current) return;
-    if (!reducedMotion) elapsed.current += delta;
-    const { scale, opacity } = aboutSignalPose(elapsed.current, active, reducedMotion);
-    ring.current.scale.setScalar(scale);
-    (ring.current.material as MeshBasicMaterial).opacity = opacity;
-    if (active && !reducedMotion && elapsed.current < 0.8) invalidate();
-  });
-  return (
-    <mesh ref={ring} position={[0, ringY, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[0.38, 0.43, 16]} />
-      <meshBasicMaterial
-        color={(theme === 'night' ? NIGHT : DAY).coral}
-        transparent
-        opacity={0}
-        depthWrite={false}
-      />
-    </mesh>
-  );
-}
-
 function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
   const height = module.size[1];
   const design = useMemo(() => towerDesign('orrery', height), [height]);
@@ -393,10 +349,6 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
   const rings = useRef<(Group | null)[]>([]);
   const beamPivot = useRef<Group>(null);
   const beam = useRef<Mesh>(null);
-  const beaconLight = useRef<PointLight>(null);
-  const ringGlow = useRef<InstancedMesh>(null);
-  const hubMaterial = useRef<MeshLambertMaterial>(null);
-  const ringGlowMatrix = useMemo(() => new Object3D(), []);
   const ringAssemblies = useMemo(
     () => Array.from({ length: 3 }, (_unused, index) => assembly(design, `ring-${index}`)),
     [design],
@@ -405,12 +357,7 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
     () => ringAssemblies.map((ring) => buildRuinMeshes(ring.parts)[0]!),
     [ringAssemblies],
   );
-  const hubMeshes = useMemo(
-    () => (design.hubPart ? buildRuinMeshes([design.hubPart]) : []),
-    [design],
-  );
-  const ringY = design.hubPart?.position[1] ?? height * 0.9;
-  const advanceNightMix = useNightMix(theme, reducedMotion);
+  const advanceBeamNightMix = useNightMix(theme, reducedMotion);
   const inwardYaw = useMemo(() => (
     Math.atan2(module.transform.position[0], module.transform.position[2])
     - module.transform.quarterTurns * Math.PI / 2
@@ -418,58 +365,25 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
 
   useFrame(({ clock }, delta) => {
     const progress = reaction.current.progress;
-    const nightMix = advanceNightMix(delta);
-    const glow = orreryBeaconGlow(clock.elapsedTime, theme === 'night', active, reducedMotion);
     rings.current.forEach((ring, index) => {
       if (!ring) return;
       const pose = orreryRingPose(progress, index, clock.elapsedTime * 0.08);
       ring.rotation.set(pose.rotationX, pose.rotationY, pose.rotationZ);
-      if (ringGlow.current) {
-        ringGlowMatrix.position.copy(ring.position);
-        ringGlowMatrix.rotation.copy(ring.rotation);
-        ringGlowMatrix.updateMatrix();
-        ringGlow.current.setMatrixAt(index, ringGlowMatrix.matrix);
-      }
     });
-    if (ringGlow.current) {
-      ringGlow.current.instanceMatrix.needsUpdate = true;
-      const material = ringGlow.current.material as MeshBasicMaterial;
-      material.color.lerpColors(ORRERY_RING_GLOW_DAY_COLOR, ORRERY_RING_GLOW_NIGHT_COLOR, nightMix);
-      material.opacity = nightMix * glow;
-      ringGlow.current.visible = material.opacity > 0.01;
-    }
-    if (hubMaterial.current) {
-      hubMaterial.current.color.set(theme === 'night' ? NIGHT.coral : DAY.coral);
-      hubMaterial.current.emissive.lerpColors(ORRERY_HUB_GLOW_DAY_COLOR, ORRERY_HUB_GLOW_NIGHT_COLOR, nightMix);
-      hubMaterial.current.emissiveIntensity = nightMix * glow * 4;
-    }
     const beamPose = orreryBeamPose(progress, inwardYaw);
     if (beamPivot.current) beamPivot.current.rotation.y = beamPose.yaw;
     if (beam.current) {
+      const nightMix = advanceBeamNightMix(delta);
       const material = beam.current.material as MeshBasicMaterial;
       material.color.lerpColors(TOWER_WINDOW_DAY_COLOR, TOWER_WINDOW_NIGHT_COLOR, nightMix);
       material.opacity = beamPose.opacity * MathUtils.lerp(0.62, 1, nightMix);
       beam.current.visible = material.opacity > 0.001;
-    }
-    if (beaconLight.current) {
-      beaconLight.current.intensity = nightMix * glow * 5.5;
     }
   });
 
   return (
     <TowerPlacement module={module}>
       <MergedParts parts={design.staticParts} theme={theme} reducedMotion={reducedMotion} />
-      {hubMeshes.map(({ tone, geometry }) => (
-        <mesh key={tone} geometry={geometry} castShadow>
-          <meshLambertMaterial
-            ref={hubMaterial}
-            color={theme === 'night' ? NIGHT.coral : DAY.coral}
-            emissive={DAY.coral}
-            emissiveIntensity={0}
-            flatShading
-          />
-        </mesh>
-      ))}
       {ringAssemblies.map((ring, index) => (
         <group
           key={index}
@@ -481,35 +395,6 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
           </mesh>
         </group>
       ))}
-      <instancedMesh
-        ref={ringGlow}
-        args={[ringMeshes[0]!.geometry, undefined, 3]}
-        frustumCulled={false}
-        visible={false}
-      >
-        <meshBasicMaterial
-          color={ORRERY_RING_GLOW_NIGHT_COLOR}
-          transparent
-          opacity={0}
-          depthWrite={false}
-          toneMapped={false}
-        />
-      </instancedMesh>
-      <pointLight
-        ref={beaconLight}
-        position={[0, ringY, 0]}
-        color={ORRERY_BEACON_LIGHT}
-        intensity={0}
-        distance={6.5}
-        decay={2}
-      />
-      <OrreryVisitRing
-        active={active}
-        sequence={reactionSequence}
-        theme={theme}
-        reducedMotion={reducedMotion}
-        ringY={ringY}
-      />
       <group ref={beamPivot} position={ringAssemblies[0]!.position}>
         <mesh ref={beam} position={[0, 0, -1.3]} rotation={[Math.PI / 2, 0, 0]} visible={false}>
           <cylinderGeometry args={[0.035, 0.22, 2.6, 6, 1, true]} />

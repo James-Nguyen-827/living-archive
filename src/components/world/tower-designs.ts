@@ -34,7 +34,6 @@ export interface TowerDesign {
   staticParts: readonly TonedPart[];
   windows: readonly WindowPart[];
   assemblies: Readonly<Record<string, TowerAssembly>>;
-  hubPart?: TonedPart;
   extentParts: readonly TonedPart[];
 }
 
@@ -126,6 +125,7 @@ function projectCourtDesign(_height: number): TowerDesign {
     { position: [0.5, 0.42, 0.12], size: [0.42, 0.64, 0.7], tone: 'surface' },
     { position: [0.26, 1.43, 0.3], size: [0.9, 0.12, 0.76], tone: 'structure' },
     { position: [0.5, 1.74, 0.46], size: [0.22, 0.56, 0.22], tone: 'structure' },
+    { position: [-0.54, 2.08, -0.74], size: [0.3, 0.08, 0.28], tone: 'structure' },
   ];
   const assemblies: Readonly<Record<string, TowerAssembly>> = {
     'rear-slab': {
@@ -133,6 +133,7 @@ function projectCourtDesign(_height: number): TowerDesign {
       parts: [
         { position: [0.51, 0, 0], size: [1.08, 0.16, 0.32], tone: 'structure' },
         { position: [0.25, -0.18, 0], size: [0.5, 0.24, 0.24], tone: 'surface' },
+        { position: [0.08, 0.13, 0], size: [0.28, 0.1, 0.24], tone: 'structure' },
       ],
     },
     'front-slab': {
@@ -140,12 +141,15 @@ function projectCourtDesign(_height: number): TowerDesign {
       parts: [
         { position: [-0.49, 0, 0], size: [1.04, 0.16, 0.34], tone: 'structure' },
         { position: [-0.25, -0.18, 0], size: [0.52, 0.24, 0.26], tone: 'surface' },
+        { position: [0, 0.13, 0.08], size: [0.28, 0.1, 0.24], tone: 'structure' },
       ],
     },
-    'coral-bridge': {
-      position: [-0.54, 2.17, 0],
+    'coral-gantry': {
+      position: [-0.02, 2.32, -0.01],
       parts: [
-        { position: [0, 0, 0], size: [0.28, 0.16, 0.94], tone: 'coral' },
+        { position: [0, 0, 0], size: [0.18, 0.12, 1.29], tone: 'coral' },
+        { position: [0, 0, -0.61], size: [0.28, 0.16, 0.16], tone: 'coral' },
+        { position: [0, 0, 0.61], size: [0.28, 0.16, 0.16], tone: 'coral' },
       ],
     },
   };
@@ -278,8 +282,8 @@ function orreryDesign(height: number): TowerDesign {
     { position: [0, height * 0.7, 0], size: [1.36, 0.12, 0.78], tone: 'structure' },
     { position: [0, height * 0.63, 0], size: [0.66, 0.12, 0.24], tone: 'structure' },
     { position: [0, height * 0.78, 0], size: [0.52, 0.42, 0.52], tone: 'surface' },
+    { position: [0, ringY, 0], size: [0.22, 0.22, 0.22], tone: 'coral' },
   ];
-  const hubPart: TonedPart = { position: [0, ringY, 0], size: [0.22, 0.22, 0.22], tone: 'coral' };
   const assemblies: Readonly<Record<string, TowerAssembly>> = {
     'ring-0': { position: [0, ringY, 0], parts: ellipseRingParts(0.76, 0.61, 16) },
     'ring-1': { position: [0, ringY, 0], parts: ellipseRingParts(0.67, 0.52, 14) },
@@ -287,7 +291,6 @@ function orreryDesign(height: number): TowerDesign {
   };
   const extentParts: readonly TonedPart[] = [
     ...staticParts,
-    hubPart,
     ...Object.values(assemblies).flatMap(translatedAssemblyParts),
     { position: [0, (height + 0.52) / 2, 0], size: [1.7, height + 0.52, 1.5], tone: 'surface' as const },
   ];
@@ -295,7 +298,6 @@ function orreryDesign(height: number): TowerDesign {
     staticParts,
     windows: fourFaceWindows(0.42, 0.42, [0.72, 1.32, 1.92]),
     assemblies,
-    hubPart,
     extentParts,
   };
 }
@@ -324,15 +326,13 @@ export function estimateTowerDesignBudget(
     assemblyGroups.set(assembly.instanceGroup ?? key, tones);
   });
   const authoredBoxCount = design.staticParts.length
-    + (design.hubPart ? 1 : 0)
     + design.windows.length
     + assemblies.reduce((count, assembly) => count + assembly.parts.length, 0);
   return {
     drawCalls: toneCount(design.staticParts)
-      + (design.hubPart ? 1 : 0)
       + [...assemblyGroups.values()].reduce((count, tones) => count + tones.size, 0)
       + 1
-      + (archetype === 'orrery' ? 2 : 0),
+      + (archetype === 'orrery' ? 1 : 0),
     triangles: authoredBoxCount * 12 + (archetype === 'orrery' ? 24 : 0),
   };
 }

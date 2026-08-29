@@ -31,15 +31,19 @@ Pointer drag directly sets a continuous orbit target; Q/E and visible controls n
 
 No identical card grids, gradient text, decorative glass, excessive rounding, repeated eyebrow labels, realistic surface textures, ornamental shadows, or accumulating generated geometry. Reactions must be deterministic, reversible, and composed from the authored primitive set.
 
+## Vegetation
+
+Five low-poly pines and eight compact shrubs soften the six platforms without occupying walk nodes or competing with landmarks. Pines use a short dirt-coloured trunk and two stacked five-sided olive cones; shrubs use a single faceted olive dodecahedron. All 13 plants are merged into one vertex-coloured draw call. Authored index controls their small scale and yaw differences, while wind and pointer response remain within 0.03 units and resolve to the exact static mesh under reduced motion. Dirt and foliage vertex colours follow the shared 900ms dusk mix.
+
 ## Zone landmarks
 
 The four zone towers are narrative “impossible mechanisms”: a shared Monument Valley–inspired family whose silhouettes, negative space, and held active poses express their content. They use authored primitive assemblies inside a 1.8×1.8-unit envelope, merged by material or instanced when parts repeat. Warm window slits remain attached to all four compass faces and coral always identifies the moving focal piece.
 
 | Landmark | Zone | Silhouette | Arrival and held pose | Neutral ambient life |
 | --- | --- | --- | --- | --- |
-| Gearhouse (`work-tower`) | Work | Short, dense workshop with a cantilever room and stair | Room turns 90°, stair aligns, coral piston rises | Combined counterweight and pennant sway |
+| Project Court (`work-tower`) | Work | Two unequal L-shaped wings frame an open diagonal courtyard | Front terrace unfolds first; at 0.48s the rear terrace and coral gantry rise, travel, extend, and seat together across the court | Gantry rests compact in its rear cradle |
 | Pagewell (`notes-tower`) | Field Notes | Tall hollow spine with five L-shaped folios | Folios fan upward into a spiral and the bookmark tips | Upper folios breathe |
 | Paradox Gate (`experiments-tower`) | Experiments | Wide twin-pier portal with dark nested frames | Frames resolve into a 0°/45°/90° aperture and hold the coral cube | Nested frames counter-spin; cube hovers and turns |
 | Orrery Beacon (`about-tower`) | About | Slender offset beacon with a large segmented halo | Three rings align and hold a warm inward-facing beam | Rings counter-rotate slowly |
 
-Tower arrivals run forward for 1.05 seconds and reverse for 0.65 seconds. Reselecting an active zone replays its performance; reduced motion snaps directly to the held pose. Ambient loops fade out as the active pose resolves, while the shared 50ms demand tick continues to serve neutral life. Layouts, window transforms, instancing groups, envelopes, and per-archetype budget estimates live in `tower-designs.ts`; pure reversible poses live in `world-motion.ts`; R3F assemblies live in `tower-modules.tsx`.
+Tower arrivals run forward for 1.05 seconds and reverse for 0.65 seconds, except Project Court which uses a 1.4s arrival and 0.8s exit for its gantry ceremony. Reselecting an active zone replays its performance; reduced motion snaps directly to the held pose. Ambient loops fade out as the active pose resolves, while the shared 50ms demand tick continues to serve neutral life. Layouts, window transforms, instancing groups, envelopes, and per-archetype budget estimates live in `tower-designs.ts`; pure reversible poses live in `world-motion.ts`; R3F assemblies live in `tower-modules.tsx`.

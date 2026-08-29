@@ -119,6 +119,12 @@ export function orreryBeaconGlow(elapsedSeconds: number, night: boolean, active:
 
 export const TOWER_ARRIVAL_DURATION = 1.05;
 export const TOWER_EXIT_DURATION = 0.65;
+export const PROJECT_COURT_REACTION_DURATIONS = { arrival: 1.4, exit: 0.8 } as const;
+
+export interface TowerReactionDurations {
+  arrival: number;
+  exit: number;
+}
 
 export interface TowerReactionState {
   progress: number;
@@ -132,6 +138,10 @@ export function advanceTowerReaction(
   active: boolean,
   reactionSequence: number,
   reducedMotion: boolean,
+  durations: TowerReactionDurations = {
+    arrival: TOWER_ARRIVAL_DURATION,
+    exit: TOWER_EXIT_DURATION,
+  },
 ): TowerReactionState {
   if (reducedMotion) {
     return { progress: active ? 1 : 0, sequence: reactionSequence };
@@ -139,7 +149,7 @@ export function advanceTowerReaction(
 
   const replaying = active && reactionSequence !== state.sequence;
   const start = replaying ? 0 : state.progress;
-  const duration = active ? TOWER_ARRIVAL_DURATION : TOWER_EXIT_DURATION;
+  const duration = active ? durations.arrival : durations.exit;
   const direction = active ? 1 : -1;
   return {
     progress: Math.min(1, Math.max(0, start + direction * Math.max(0, deltaSeconds) / duration)),
@@ -149,26 +159,76 @@ export function advanceTowerReaction(
 
 export interface ProjectCourtPose {
   rearSlabYaw: number;
+  rearSlabLift: number;
   frontSlabYaw: number;
-  bridgeRoll: number;
-  bridgeLift: number;
+  frontSlabLift: number;
+  gantryPosition: GridPoint;
+  gantryYaw: number;
+  gantryScaleZ: number;
 }
+
+const PROJECT_COURT_NEUTRAL_POSE: ProjectCourtPose = {
+  rearSlabYaw: -Math.PI / 2,
+  rearSlabLift: 0,
+  frontSlabYaw: 0,
+  frontSlabLift: 0,
+  gantryPosition: [-0.54, 2.2, -0.74],
+  gantryYaw: Math.PI / 2,
+  gantryScaleZ: 0.22,
+};
+
+const PROJECT_COURT_HELD_POSE: ProjectCourtPose = {
+  rearSlabYaw: 0,
+  rearSlabLift: 0,
+  frontSlabYaw: -Math.PI / 2,
+  frontSlabLift: 0,
+  gantryPosition: [-0.02, 2.32, -0.01],
+  gantryYaw: 0.752,
+  gantryScaleZ: 1,
+};
 
 function stagedTowerProgress(progress: number, start: number, end: number): number {
   return easeOutQuint((progress - start) / (end - start));
 }
 
-/** Work Project Court: two quarter-turn slabs resolve before the coral bridge closes. */
+function stagedEaseInOutProgress(progress: number, start: number, end: number): number {
+  return easeInOutCubic((progress - start) / (end - start));
+}
+
+function stagedArcLift(progress: number, start: number, end: number, height: number): number {
+  if (progress <= start || progress >= end) return 0;
+  return Math.sin(Math.PI * stagedEaseInOutProgress(progress, start, end)) * height;
+}
+
+function lerp(from: number, to: number, progress: number): number {
+  return from + (to - from) * progress;
+}
+
+/** Work Project Court: two terraces unfold before a compact gantry flies and seats. */
 export function projectCourtPose(progress: number): ProjectCourtPose {
   const clamped = Math.min(1, Math.max(0, progress));
-  const rearProgress = stagedTowerProgress(clamped, 0, 0.54);
-  const frontProgress = stagedTowerProgress(clamped, 0.14, 0.7);
-  const bridgeProgress = stagedTowerProgress(clamped, 0.58, 1);
+  if (clamped === 0) return PROJECT_COURT_NEUTRAL_POSE;
+  if (clamped === 1) return PROJECT_COURT_HELD_POSE;
+  const rearProgress = stagedTowerProgress(clamped, 0.48, 0.9);
+  const frontProgress = stagedTowerProgress(clamped, 0.1, 0.54);
+  const liftProgress = stagedEaseInOutProgress(clamped, 0.32, 0.56);
+  const travelProgress = stagedEaseInOutProgress(clamped, 0.48, 0.72);
+  const yawProgress = stagedTowerProgress(clamped, 0.48, 0.72);
+  const extensionProgress = stagedTowerProgress(clamped, 0.6, 0.82);
+  const landingProgress = stagedTowerProgress(clamped, 0.8, 1);
+  const flightY = lerp(2.2, 2.68, liftProgress);
   return {
     rearSlabYaw: -Math.PI / 2 + rearProgress * Math.PI / 2,
+    rearSlabLift: stagedArcLift(clamped, 0.48, 0.9, 0.24),
     frontSlabYaw: frontProgress === 0 ? 0 : -frontProgress * Math.PI / 2,
-    bridgeRoll: (1 - bridgeProgress) * Math.PI / 2,
-    bridgeLift: (1 - bridgeProgress) * 0.18,
+    frontSlabLift: stagedArcLift(clamped, 0.1, 0.54, 0.18),
+    gantryPosition: [
+      lerp(-0.54, -0.02, travelProgress),
+      lerp(flightY, 2.32, landingProgress),
+      lerp(-0.74, -0.01, travelProgress),
+    ],
+    gantryYaw: lerp(Math.PI / 2, 0.752, yawProgress),
+    gantryScaleZ: lerp(0.22, 1, extensionProgress),
   };
 }
 

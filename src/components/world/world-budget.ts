@@ -3,13 +3,21 @@ import {
   estimateTowerDesignBudget,
   towerArchetypeFromModuleId,
 } from './tower-designs';
+import {
+  estimateVegetationBudget,
+  VEGETATION_DEFINITIONS,
+  type VegetationDefinition,
+} from './world-vegetation';
 
 export interface SceneBudgetEstimate {
   drawCalls: number;
   triangles: number;
 }
 
-export function estimateSceneBudget(world: WorldMap, treeCount = 0): SceneBudgetEstimate {
+export function estimateSceneBudget(
+  world: WorldMap,
+  vegetation: readonly VegetationDefinition[] = VEGETATION_DEFINITIONS,
+): SceneBudgetEstimate {
   let boxMeshes = 0;
   let otherMeshes = 0;
   let towerDrawCalls = 0;
@@ -37,14 +45,15 @@ export function estimateSceneBudget(world: WorldMap, treeCount = 0): SceneBudget
     else boxMeshes += 1;
   }
 
-  const instancedCalls = (treeCount > 0 ? 3 : 0) + 2;
+  const vegetationBudget = estimateVegetationBudget(vegetation);
+  const instancedCalls = 2;
   const ruinMeshes = 4;
   const carouselCalls = 12;
   const carouselTriangles = 760;
   const travelerCalls = 2;
   const shadowGroundCalls = 1;
   const seaPlaneCalls = 1;
-  const drawCalls = boxMeshes + otherMeshes + towerDrawCalls + instancedCalls + carouselCalls + travelerCalls + shadowGroundCalls + seaPlaneCalls;
-  const triangles = boxMeshes * 12 + otherMeshes * 20 + towerTriangles + treeCount * 28 + ruinMeshes * 12 + carouselTriangles + 120;
+  const drawCalls = boxMeshes + otherMeshes + towerDrawCalls + instancedCalls + vegetationBudget.drawCalls + carouselCalls + travelerCalls + shadowGroundCalls + seaPlaneCalls;
+  const triangles = boxMeshes * 12 + otherMeshes * 20 + towerTriangles + vegetationBudget.triangles + ruinMeshes * 12 + carouselTriangles + 120;
   return { drawCalls, triangles };
 }

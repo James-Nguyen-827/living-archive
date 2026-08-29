@@ -216,6 +216,29 @@ describe('narrative tower reactions', () => {
     expect(exiting.progress).toBeCloseTo(0.5);
   });
 
+  it('supports a longer reversible ceremony without changing the shared timing', () => {
+    const durations = { arrival: 1.4, exit: 0.8 };
+    const arriving = advanceTowerReaction(
+      { progress: 0, sequence: 4 },
+      0.7,
+      true,
+      4,
+      false,
+      durations,
+    );
+    const exiting = advanceTowerReaction(
+      { progress: 1, sequence: 4 },
+      0.4,
+      false,
+      4,
+      false,
+      durations,
+    );
+
+    expect(arriving.progress).toBeCloseTo(0.5);
+    expect(exiting.progress).toBeCloseTo(0.5);
+  });
+
   it('replays an active tower when its reaction sequence changes', () => {
     const replayed = advanceTowerReaction({ progress: 1, sequence: 4 }, 0, true, 5, false);
     const replayMidpoint = advanceTowerReaction(replayed, 0.525, true, 5, false);
@@ -229,39 +252,77 @@ describe('narrative tower reactions', () => {
     expect(advanceTowerReaction({ progress: 0.6, sequence: 2 }, 0, false, 2, true).progress).toBe(0);
   });
 
-  it('stages the Project Court slabs before lowering its coral bridge', () => {
+  it('unfolds the Project Court terraces before flying and seating its gantry', () => {
     const neutral = {
       rearSlabYaw: -Math.PI / 2,
+      rearSlabLift: 0,
       frontSlabYaw: 0,
-      bridgeRoll: Math.PI / 2,
-      bridgeLift: 0.18,
+      frontSlabLift: 0,
+      gantryPosition: [-0.54, 2.2, -0.74],
+      gantryYaw: Math.PI / 2,
+      gantryScaleZ: 0.22,
     };
     const held = {
       rearSlabYaw: 0,
+      rearSlabLift: 0,
       frontSlabYaw: -Math.PI / 2,
-      bridgeRoll: 0,
-      bridgeLift: 0,
+      frontSlabLift: 0,
+      gantryPosition: [-0.02, 2.32, -0.01],
+      gantryYaw: 0.752,
+      gantryScaleZ: 1,
     };
 
     expect(projectCourtPose(-1)).toEqual(neutral);
     expect(projectCourtPose(0)).toEqual(neutral);
 
-    const early = projectCourtPose(0.1);
-    expect(early.rearSlabYaw).toBeGreaterThan(neutral.rearSlabYaw);
-    expect(early.frontSlabYaw).toBe(neutral.frontSlabYaw);
-    expect(early.bridgeRoll).toBe(neutral.bridgeRoll);
+    const early = projectCourtPose(0.2);
+    expect(early.rearSlabYaw).toBe(neutral.rearSlabYaw);
+    expect(early.rearSlabLift).toBe(0);
+    expect(early.frontSlabYaw).toBeLessThan(neutral.frontSlabYaw);
+    expect(early.frontSlabLift).toBeGreaterThan(0);
+    expect(early.gantryPosition).toEqual(neutral.gantryPosition);
+    expect(early.gantryScaleZ).toBe(neutral.gantryScaleZ);
 
-    const midpoint = projectCourtPose(0.5);
-    expect(midpoint.rearSlabYaw).toBeGreaterThan(early.rearSlabYaw);
-    expect(midpoint.frontSlabYaw).toBeLessThan(neutral.frontSlabYaw);
-    expect(midpoint.bridgeRoll).toBe(neutral.bridgeRoll);
+    const rearUnfold = projectCourtPose(0.55);
+    expect(rearUnfold.rearSlabYaw).toBeGreaterThan(neutral.rearSlabYaw);
+    expect(rearUnfold.rearSlabLift).toBeGreaterThan(0);
 
-    const closing = projectCourtPose(0.75);
-    expect(closing.bridgeRoll).toBeLessThan(neutral.bridgeRoll);
-    expect(closing.bridgeLift).toBeLessThan(neutral.bridgeLift);
+    const takeoff = projectCourtPose(0.44);
+    expect(takeoff.rearSlabYaw).toBe(neutral.rearSlabYaw);
+    expect(takeoff.gantryPosition[1]).toBeGreaterThan(neutral.gantryPosition[1]);
+    expect(takeoff.gantryPosition[0]).toBe(neutral.gantryPosition[0]);
+    expect(takeoff.gantryYaw).toBe(neutral.gantryYaw);
+    expect(takeoff.gantryScaleZ).toBe(neutral.gantryScaleZ);
+
+    const airborne = projectCourtPose(0.7);
+    expect(airborne.gantryPosition[1]).toBeCloseTo(2.68);
+    expect(airborne.gantryPosition[0]).toBeGreaterThan(neutral.gantryPosition[0]);
+    expect(airborne.gantryYaw).toBeLessThan(neutral.gantryYaw);
+    expect(airborne.gantryScaleZ).toBeGreaterThan(neutral.gantryScaleZ);
+
+    const landing = projectCourtPose(0.9);
+    expect(landing.gantryPosition[0]).toBeCloseTo(held.gantryPosition[0]);
+    expect(landing.gantryPosition[2]).toBeCloseTo(held.gantryPosition[2]);
+    expect(landing.gantryPosition[1]).toBeGreaterThan(held.gantryPosition[1]);
+    expect(landing.gantryScaleZ).toBe(held.gantryScaleZ);
 
     expect(projectCourtPose(1)).toEqual(held);
     expect(projectCourtPose(2)).toEqual(held);
+
+    const halfSpan = 1.29 / 2;
+    const endpoint = (direction: -1 | 1) => [
+      held.gantryPosition[0] + Math.sin(held.gantryYaw) * halfSpan * direction,
+      held.gantryPosition[1] - 0.16 / 2,
+      held.gantryPosition[2] + Math.cos(held.gantryYaw) * halfSpan * direction,
+    ] as const;
+    const rearEndpoint = endpoint(-1);
+    const frontEndpoint = endpoint(1);
+    expect(rearEndpoint[0]).toBeCloseTo(-0.46, 2);
+    expect(rearEndpoint[2]).toBeCloseTo(-0.48, 2);
+    expect(frontEndpoint[0]).toBeCloseTo(0.42, 2);
+    expect(frontEndpoint[2]).toBeCloseTo(0.46, 2);
+    expect(rearEndpoint[1]).toBeCloseTo(2.24, 2);
+    expect(frontEndpoint[1]).toBeCloseTo(2.24, 2);
   });
 
   it('fans the Pagewell folios in a rising wave and tips its bookmark', () => {
