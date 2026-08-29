@@ -79,6 +79,14 @@ export function carouselLightOpacity(elapsedSeconds: number, night: boolean, act
   return night ? 0.85 + swing * 0.15 : 0.45 + swing * 0.35;
 }
 
+/** Carousel bulbs breathe in and out while lit, using the same cadence as the orrery rings. */
+export function carouselBulbGlow(elapsedSeconds: number, night: boolean, active: boolean, reducedMotion: boolean): number {
+  const lit = carouselLightOpacity(elapsedSeconds, night, active, reducedMotion);
+  if (lit <= 0) return 0;
+  if (reducedMotion) return lit;
+  return lit * (0.72 + Math.sin(elapsedSeconds * 2.2) * 0.28);
+}
+
 export const CAROUSEL_IDLE_SPIN_SPEED = 0.25;
 
 /** Carousel spin: a visit throws the ride up to five times idle, then it coasts back down over a few seconds. */

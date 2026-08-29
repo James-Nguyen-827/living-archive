@@ -13,10 +13,11 @@ export const NIGHT = {
   coral: '#ff9a72', water: '#4aa0b0', shadow: '#1c2430', sky: '#2a3550', sun: '#82512e', moon: '#d5e8c0',
   head: '#f8f3e6',
 };
-export const CORAL_BEACON_EMISSIVE = { day: '#000000', night: '#ff8a60' };
+export const CORAL_BEACON_TONE = { day: '#e75f49', night: '#b8380a' };
+export const CORAL_BEACON_EMISSIVE = { day: '#000000', night: '#ff2e00' };
 export const CORAL_BEACON_EMISSIVE_DAY_COLOR = new Color(CORAL_BEACON_EMISSIVE.day);
 export const CORAL_BEACON_EMISSIVE_NIGHT_COLOR = new Color(CORAL_BEACON_EMISSIVE.night);
-export const CORAL_BEACON_EMISSIVE_INTENSITY = 3;
+export const CORAL_BEACON_EMISSIVE_INTENSITY = 3.25;
 export const TOWER_WINDOW = { day: '#f2d489', night: '#ffd35c' };
 export const ORRERY_RING_GLOW = { day: '#f4c84d', night: '#ffd35c' };
 export const ORRERY_HUB_GLOW = { day: '#e75f49', night: '#ff9a78' };
@@ -36,38 +37,103 @@ export type Tone = PaletteKey | { day: string; night: string };
 export const toneColor = (tone: Tone, theme: WorldTheme) =>
   typeof tone === 'string' ? (theme === 'night' ? NIGHT : DAY)[tone] : (theme === 'night' ? tone.night : tone.day);
 
-export function AnimatedLambert({ tone, theme, transparent = false, opacity = 1, depthWrite = true, reducedMotion = false }: {
-  tone: Tone; theme: WorldTheme; transparent?: boolean; opacity?: number; depthWrite?: boolean; reducedMotion?: boolean;
+export function updateCoralBeaconLambert(
+  material: MeshLambertMaterial,
+  {
+    fromColor,
+    theme,
+    transitionProgress,
+    emissiveMix,
+    pulse,
+  }: {
+    fromColor: Color;
+    theme: WorldTheme;
+    transitionProgress: number;
+    emissiveMix: number;
+    pulse: number;
+  },
+) {
+  const target = new Color(toneColor(CORAL_BEACON_TONE, theme));
+  if (emissiveMix > 0 && theme === 'night') {
+    target.lerp(CORAL_BEACON_EMISSIVE_NIGHT_COLOR, emissiveMix * 0.28);
+  }
+  material.color.lerpColors(fromColor, target, transitionProgress);
+  if (emissiveMix > 0) {
+    material.emissive.copy(CORAL_BEACON_EMISSIVE_NIGHT_COLOR);
+    material.emissiveIntensity = emissiveMix * pulse * CORAL_BEACON_EMISSIVE_INTENSITY;
+  } else {
+    material.emissive.set('#000000');
+    material.emissiveIntensity = 0;
+  }
+}
+
+export const ORRERY_RING_EMISSIVE_INTENSITY = 2.5;
+
+export function updateGoldRingLambert(
+  material: MeshLambertMaterial,
+  {
+    fromColor,
+    theme,
+    transitionProgress,
+    emissiveMix,
+    pulse = 1,
+  }: {
+    fromColor: Color;
+    theme: WorldTheme;
+    transitionProgress: number;
+    emissiveMix: number;
+    pulse?: number;
+  },
+) {
+  const palette = theme === 'night' ? NIGHT : DAY;
+  material.color.lerpColors(fromColor, new Color(palette.sun), transitionProgress);
+  const nightMix = theme === 'night' ? transitionProgress : 1 - transitionProgress;
+  material.emissive.lerpColors(ORRERY_RING_GLOW_DAY_COLOR, ORRERY_RING_GLOW_NIGHT_COLOR, nightMix);
+  if (emissiveMix > 0) {
+    material.emissiveIntensity = emissiveMix * pulse * ORRERY_RING_EMISSIVE_INTENSITY;
+  } else {
+    material.emissive.set('#000000');
+    material.emissiveIntensity = 0;
+  }
+}
+
+export function AnimatedLambert({ tone, theme, transparent = false, opacity = 1, depthWrite = true, reducedMotion = false, beacon = false }: {
+  tone: Tone; theme: WorldTheme; transparent?: boolean; opacity?: number; depthWrite?: boolean; reducedMotion?: boolean; beacon?: boolean;
 }) {
   const material = useRef<MeshLambertMaterial>(null);
   const from = useRef(new Color(toneColor(tone, 'day')));
   const elapsed = useRef(0.9);
-  const isCoral = tone === 'coral';
   useEffect(() => {
-    if (material.current) from.current.copy(material.current.color);
+    if (material.current) {
+      from.current.copy(beacon ? new Color(CORAL_BEACON_TONE.day) : material.current.color);
+    }
     elapsed.current = 0;
-  }, [theme]);
+  }, [beacon, theme]);
   const { invalidate } = useThree();
   useFrame((state, delta) => {
     if (!material.current) return;
     if (!reducedMotion) elapsed.current += delta;
     else elapsed.current = 0.9;
     const progress = themeTransitionProgress(elapsed.current);
-    material.current.color.lerpColors(from.current, new Color(toneColor(tone, theme)), progress);
-    if (isCoral) {
+    if (beacon) {
       const nightMix = theme === 'night' ? progress : 1 - progress;
       const glow = coralBeaconGlow(state.clock.elapsedTime, theme === 'night', reducedMotion);
-      material.current.emissive.lerpColors(
-        CORAL_BEACON_EMISSIVE_DAY_COLOR,
-        CORAL_BEACON_EMISSIVE_NIGHT_COLOR,
-        nightMix,
-      );
-      material.current.emissiveIntensity = nightMix * glow * CORAL_BEACON_EMISSIVE_INTENSITY;
+      updateCoralBeaconLambert(material.current, {
+        fromColor: from.current,
+        theme,
+        transitionProgress: progress,
+        emissiveMix: nightMix,
+        pulse: glow,
+      });
+    } else {
+      material.current.color.lerpColors(from.current, new Color(toneColor(tone, theme)), progress);
+      material.current.emissive.set('#000000');
+      material.current.emissiveIntensity = 0;
     }
     if (!reducedMotion && elapsed.current < 0.9) invalidate();
-    if (isCoral && theme === 'night') invalidate();
+    if (beacon && theme === 'night') invalidate();
   });
-  return <meshLambertMaterial ref={material} color={toneColor(tone, theme)} flatShading transparent={transparent} opacity={opacity} depthWrite={depthWrite} />;
+  return <meshLambertMaterial ref={material} color={toneColor(beacon ? CORAL_BEACON_TONE : tone, theme)} flatShading transparent={transparent} opacity={opacity} depthWrite={depthWrite} />;
 }
 
 export function useNightMix(theme: WorldTheme, reducedMotion: boolean): (delta: number) => number {

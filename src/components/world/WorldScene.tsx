@@ -18,17 +18,17 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { ProjectedLabel } from './label-layout';
+import { zoneLabelAnchor } from './label-anchors';
 import { getStairSteps } from './stair-geometry';
 import { TowerModule } from './tower-modules';
 import { buildRuinMeshes, type TonedPart } from './tower-designs';
 import { AmbientMotionDriver } from './use-ambient-tick';
 import {
   AnimatedLambert,
-  CORAL_BEACON_EMISSIVE_INTENSITY,
-  CORAL_BEACON_EMISSIVE_NIGHT_COLOR,
   DAY,
   DECOR_GROUND_SNAP,
   NIGHT,
+  updateGoldRingLambert,
   useNightMix,
   type PaletteKey,
   type WorldTheme,
@@ -42,10 +42,9 @@ import {
 import {
   aboutSignalPose,
   cameraReframeProgress,
-  carouselLightOpacity,
+  carouselBulbGlow,
   carouselSpinSpeed,
   CAROUSEL_IDLE_SPIN_SPEED,
-  coralBeaconGlow,
   easeOutQuint,
   nearestEquivalentAngle,
   rotatePointY,
@@ -71,9 +70,56 @@ interface Props {
 
 const PLATFORM_PILLAR_DEPTH = 1.75;
 const WORLD_PILLAR_BOTTOM = -2.25;
+const WORLD_WATER_SIZE = 22;
+const WORLD_WATER_HALF_EXTENT = WORLD_WATER_SIZE / 2;
 const WORLD_WATER_LEVEL = -PLATFORM_PILLAR_DEPTH / 2;
 const WORLD_WATER_THICKNESS = WORLD_WATER_LEVEL - WORLD_PILLAR_BOTTOM;
 const WORLD_WATER_CENTER_Y = (WORLD_WATER_LEVEL + WORLD_PILLAR_BOTTOM) / 2;
+const WORLD_SHADOW_PLANE_Y = WORLD_WATER_LEVEL - 0.02;
+const CELESTIAL_RADIUS = 0.7;
+const CAMERA_ORBIT_OFFSET = new Vector3(14, 14, 14);
+const DEFAULT_HOME_FOCUS = new Vector3(0, 0, 0);
+const DEFAULT_HOME_CAMERA_ZOOM = 37;
+const CELESTIAL_BELOW_HORIZON_Y = -3.5;
+const SUN_DAY_POSITION = new Vector3(5.5, 10.2, -6.5);
+const SUN_SET_POSITION = new Vector3(5.5, CELESTIAL_BELOW_HORIZON_Y, -6.5);
+
+function computeMoonPositionsFromSun(
+  sunDay: Vector3,
+  belowHorizonY: number,
+  focus: Vector3,
+  cameraOffset: Vector3,
+  zoom: number,
+): { night: Vector3; rise: Vector3 } {
+  const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+  camera.position.copy(focus).add(cameraOffset);
+  camera.lookAt(focus);
+  camera.zoom = zoom;
+  camera.updateProjectionMatrix();
+  camera.updateMatrixWorld();
+
+  const night = sunDay.clone().sub(focus);
+  night.applyMatrix4(camera.matrixWorldInverse);
+  night.x *= -1;
+  night.applyMatrix4(camera.matrixWorld);
+  night.add(focus);
+
+  return { night, rise: new Vector3(night.x, belowHorizonY, night.z) };
+}
+
+const { night: MOON_NIGHT_POSITION, rise: MOON_RISE_POSITION } = computeMoonPositionsFromSun(
+  SUN_DAY_POSITION,
+  CELESTIAL_BELOW_HORIZON_Y,
+  DEFAULT_HOME_FOCUS,
+  CAMERA_ORBIT_OFFSET,
+  DEFAULT_HOME_CAMERA_ZOOM,
+);
+
+function updateCelestialPositions(dusk: number, sun: Vector3, moon: Vector3, light: Vector3) {
+  sun.copy(SUN_DAY_POSITION).lerp(SUN_SET_POSITION, dusk);
+  moon.copy(MOON_RISE_POSITION).lerp(MOON_NIGHT_POSITION, dusk);
+  light.copy(sun).multiplyScalar(1 - dusk).addScaledVector(moon, dusk);
+}
 
 function platformShaftLayout(module: WorldModule) {
   const slabHeight = module.size[1] / 2;
@@ -114,7 +160,7 @@ function PlatformBody({
   const { mossHeight, mossCenterY, shaftHeight, shaftCenterY, capWidth, capDepth } = platformShaftLayout(module);
   return (
     <>
-      <mesh position={[0, shaftCenterY, 0]} castShadow receiveShadow>
+      <mesh position={[0, shaftCenterY, 0]} receiveShadow>
         <boxGeometry args={[capWidth, shaftHeight, capDepth]} />
         <AnimatedLambert tone="dirt" theme={theme} />
       </mesh>
@@ -142,6 +188,9 @@ function SceneLight({
 }: Pick<Props, 'theme' | 'reducedMotion'> & { dusk: { current: number } }) {
   const light = useRef<DirectionalLight>(null);
   const ambient = useRef<AmbientLight>(null);
+  const sunPosition = useRef(new Vector3());
+  const moonPosition = useRef(new Vector3());
+  const lightPosition = useRef(new Vector3());
   const progress = dusk;
   const from = useRef(progress.current);
   const elapsed = useRef(0.9);
@@ -161,8 +210,11 @@ function SceneLight({
       progress.current = MathUtils.lerp(from.current, target, themeTransitionProgress(elapsed.current));
     }
     const value = progress.current;
+    updateCelestialPositions(value, sunPosition.current, moonPosition.current, lightPosition.current);
     if (light.current) {
-      light.current.position.set(MathUtils.lerp(8, -7, value), MathUtils.lerp(15, 8, value), MathUtils.lerp(10, 6, value));
+      light.current.position.copy(lightPosition.current);
+      light.current.target.position.set(0, 0, 0);
+      light.current.target.updateMatrixWorld();
       light.current.intensity = MathUtils.lerp(2.8, 1.85, value);
       light.current.color.lerpColors(new Color('#fff9df'), new Color('#b8c8e0'), value);
     }
@@ -177,15 +229,20 @@ function SceneLight({
       <ambientLight ref={ambient} intensity={1.5} />
       <directionalLight
         ref={light}
-        position={[8, 15, 10]}
+        position={SUN_DAY_POSITION.toArray()}
         intensity={2.8}
         castShadow
         shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-18}
-        shadow-camera-right={18}
-        shadow-camera-top={18}
-        shadow-camera-bottom={-18}
-      />
+        shadow-camera-left={-WORLD_WATER_HALF_EXTENT}
+        shadow-camera-right={WORLD_WATER_HALF_EXTENT}
+        shadow-camera-top={WORLD_WATER_HALF_EXTENT}
+        shadow-camera-bottom={-WORLD_WATER_HALF_EXTENT}
+        shadow-camera-near={0.5}
+        shadow-camera-far={40}
+        shadow-bias={-0.0002}
+      >
+        <object3D attach="target" position={[0, 0, 0]} />
+      </directionalLight>
       <NightAmbience theme={theme} reducedMotion={reducedMotion} dusk={progress} />
     </>
   );
@@ -194,16 +251,22 @@ function SceneLight({
 function CelestialBodies({ theme, dusk }: { theme: Props['theme']; dusk: { current: number } }) {
   const sun = useRef<Mesh>(null);
   const moon = useRef<Mesh>(null);
+  const sunPosition = useRef(new Vector3());
+  const moonPosition = useRef(new Vector3());
+  const lightPosition = useRef(new Vector3());
   const { invalidate } = useThree();
   useFrame(() => {
     const value = dusk.current;
+    updateCelestialPositions(value, sunPosition.current, moonPosition.current, lightPosition.current);
     if (sun.current) {
+      sun.current.position.copy(sunPosition.current);
       const material = sun.current.material as MeshLambertMaterial;
       material.transparent = true;
       material.opacity = Math.max(0, 1 - value);
       sun.current.visible = material.opacity > 0.04;
     }
     if (moon.current) {
+      moon.current.position.copy(moonPosition.current);
       const material = moon.current.material as MeshLambertMaterial;
       material.transparent = true;
       material.opacity = Math.max(0, value);
@@ -213,11 +276,11 @@ function CelestialBodies({ theme, dusk }: { theme: Props['theme']; dusk: { curre
   });
   return (
     <>
-      <mesh ref={sun} position={[5.5, 10.2, -6.5]}>
-        <icosahedronGeometry args={[0.7, 1]} /><AnimatedLambert tone="sun" theme={theme} transparent opacity={1} />
+      <mesh ref={sun} position={SUN_DAY_POSITION.toArray()}>
+        <icosahedronGeometry args={[CELESTIAL_RADIUS, 1]} /><AnimatedLambert tone="sun" theme={theme} transparent opacity={1} />
       </mesh>
-      <mesh ref={moon} position={[6.4, 10.5, -5.8]} visible={false}>
-        <icosahedronGeometry args={[0.55, 1]} /><AnimatedLambert tone="moon" theme={theme} transparent opacity={0} />
+      <mesh ref={moon} position={MOON_RISE_POSITION.toArray()} visible={false}>
+        <icosahedronGeometry args={[CELESTIAL_RADIUS, 1]} /><AnimatedLambert tone="moon" theme={theme} transparent opacity={0} />
       </mesh>
     </>
   );
@@ -297,9 +360,9 @@ function CameraRig({ selectedZone, rotationAngle, reducedMotion }: Pick<Props, '
 
 function LabelProjector({ worldGroup, onProject }: { worldGroup: React.RefObject<Group | null>; onProject: LabelProjectionHandler }) {
   const { camera, size } = useThree();
-  const anchors = useMemo(() => Object.entries(ZONE_NODES).map(([zone, nodeId]) => {
-    const node = WORLD_MAP.nodes.find((item) => item.id === nodeId)!;
-    return { id: zone, point: new Vector3(node.position[0], node.position[1] + 2.05, node.position[2]) };
+  const anchors = useMemo(() => (Object.keys(ZONE_NODES) as ZoneId[]).map((zone) => {
+    const [x, y, z] = zoneLabelAnchor(zone);
+    return { id: zone, point: new Vector3(x, y, z) };
   }), []);
   const last = useRef('');
   useFrame(() => {
@@ -365,7 +428,7 @@ function ZonePlatform({ module, zone, theme, selected, reducedMotion, reactionSe
   const group = useRef<Group>(null);
   const moss = useRef<MeshLambertMaterial>(null);
   const [hovered, setHovered] = useState(false);
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     if (!group.current || !moss.current) return;
     const active = hovered || selected;
     const lift = active && !reducedMotion ? 0.04 : 0;
@@ -373,13 +436,6 @@ function ZonePlatform({ module, zone, theme, selected, reducedMotion, reactionSe
     const palette = theme === 'night' ? NIGHT : DAY;
     const target = new Color(active ? palette.coral : palette.moss);
     moss.current.color.lerp(target, 1 - Math.exp(-delta * 13));
-    if (theme === 'night' && active) {
-      moss.current.emissive.copy(CORAL_BEACON_EMISSIVE_NIGHT_COLOR);
-      moss.current.emissiveIntensity = coralBeaconGlow(state.clock.elapsedTime, true, reducedMotion) * CORAL_BEACON_EMISSIVE_INTENSITY;
-    } else {
-      moss.current.emissive.set('#000000');
-      moss.current.emissiveIntensity = 0;
-    }
   });
   return (
     <group ref={group} position={module.transform.position} rotation={[0, module.transform.quarterTurns * Math.PI / 2, 0]}>
@@ -506,8 +562,8 @@ function HabitatSea({ theme, reducedMotion }: { theme: Props['theme']; reducedMo
     invalidate();
   });
   return (
-    <mesh ref={surface} position={[0, WORLD_WATER_CENTER_Y, 0]} receiveShadow>
-      <boxGeometry args={[22, WORLD_WATER_THICKNESS, 22]} />
+    <mesh ref={surface} position={[0, WORLD_WATER_CENTER_Y, 0]}>
+      <boxGeometry args={[WORLD_WATER_SIZE, WORLD_WATER_THICKNESS, WORLD_WATER_SIZE]} />
       <AnimatedLambert tone="water" theme={theme} transparent opacity={0.9} depthWrite={false} />
     </mesh>
   );
@@ -650,9 +706,6 @@ const CAROUSEL_NIGHT = {
 };
 type CarouselTone = keyof typeof CAROUSEL_DAY;
 const carouselTone = (tone: CarouselTone) => ({ day: CAROUSEL_DAY[tone], night: CAROUSEL_NIGHT[tone] });
-const CAROUSEL_BULB = { day: '#fff3c4', night: '#ffe9a8' };
-const CAROUSEL_BULB_DAY_COLOR = new Color(CAROUSEL_BULB.day);
-const CAROUSEL_BULB_NIGHT_COLOR = new Color(CAROUSEL_BULB.night);
 
 type CarouselPart = TonedPart<CarouselTone>;
 
@@ -729,7 +782,9 @@ function HobbiesCarousel({ active, sequence, theme, reducedMotion, onSelect }: {
 }) {
   const rotor = useRef<Group>(null);
   const bulbs = useRef<Mesh>(null);
-  const bulbMaterial = useRef<MeshBasicMaterial>(null);
+  const bulbMaterial = useRef<MeshLambertMaterial>(null);
+  const bulbFrom = useRef(new Color(DAY.sun));
+  const bulbThemeElapsed = useRef(0.9);
   const elapsed = useRef(0);
   const advanceNightMix = useNightMix(theme, reducedMotion);
   const { invalidate } = useThree();
@@ -745,8 +800,10 @@ function HobbiesCarousel({ active, sequence, theme, reducedMotion, onSelect }: {
 
   useEffect(() => {
     if (active) elapsed.current = 0;
+    bulbThemeElapsed.current = 0;
+    if (bulbMaterial.current) bulbFrom.current.copy(bulbMaterial.current.color);
     invalidate();
-  }, [active, invalidate, sequence]);
+  }, [active, invalidate, sequence, theme]);
 
   useFrame((_state, delta) => {
     if (!reducedMotion) elapsed.current += delta;
@@ -754,16 +811,24 @@ function HobbiesCarousel({ active, sequence, theme, reducedMotion, onSelect }: {
     // Negative yaw reads as clockwise from the orthographic camera looking down.
     if (rotor.current) rotor.current.rotation.y -= delta * spinSpeed;
     const nightMix = advanceNightMix(delta);
-    const opacity = MathUtils.lerp(
-      carouselLightOpacity(elapsed.current, false, active, reducedMotion),
-      carouselLightOpacity(elapsed.current, true, active, reducedMotion),
+    if (!reducedMotion) bulbThemeElapsed.current += delta;
+    else bulbThemeElapsed.current = 0.9;
+    const themeProgress = themeTransitionProgress(bulbThemeElapsed.current);
+    const glow = MathUtils.lerp(
+      carouselBulbGlow(elapsed.current, false, active, reducedMotion),
+      carouselBulbGlow(elapsed.current, true, active, reducedMotion),
       nightMix,
     );
     if (bulbMaterial.current) {
-      bulbMaterial.current.color.lerpColors(CAROUSEL_BULB_DAY_COLOR, CAROUSEL_BULB_NIGHT_COLOR, nightMix);
-      bulbMaterial.current.opacity = opacity;
+      updateGoldRingLambert(bulbMaterial.current, {
+        fromColor: bulbFrom.current,
+        theme,
+        transitionProgress: themeProgress,
+        emissiveMix: glow,
+      });
     }
-    if (bulbs.current) bulbs.current.visible = opacity > 0.02;
+    if (bulbs.current) bulbs.current.visible = glow > 0.02;
+    if (glow > 0.02 || bulbThemeElapsed.current < 0.9) invalidate();
     // The burst is the only carousel motion the 50ms idle tick renders too coarsely.
     if (spinSpeed > CAROUSEL_IDLE_SPIN_SPEED * 1.02) invalidate();
   });
@@ -811,13 +876,11 @@ function HobbiesCarousel({ active, sequence, theme, reducedMotion, onSelect }: {
             <AnimatedLambert tone={carouselTone(tone)} theme={theme} />
           </mesh>
         ))}
-        <mesh ref={bulbs} geometry={bulbGeometry} visible={theme === 'night'}>
-          <meshBasicMaterial
+        <mesh ref={bulbs} geometry={bulbGeometry} castShadow visible={theme === 'night'}>
+          <meshLambertMaterial
             ref={bulbMaterial}
-            color={theme === 'night' ? CAROUSEL_BULB.night : CAROUSEL_BULB.day}
-            transparent
-            opacity={carouselLightOpacity(0, theme === 'night', false, true)}
-            depthWrite={false}
+            color={DAY.sun}
+            flatShading
           />
         </mesh>
       </group>
@@ -938,9 +1001,9 @@ export function WorldScene(props: Props) {
       <AmbientMotionDriver reducedMotion={props.reducedMotion} />
       <SceneLight theme={props.theme} reducedMotion={props.reducedMotion} dusk={dusk} />
       <CameraRig selectedZone={props.selectedZone} rotationAngle={props.rotationAngle} reducedMotion={props.reducedMotion} />
+      <CelestialBodies theme={props.theme} dusk={dusk} />
       <LabelProjector worldGroup={worldGroup} onProject={props.onLabelsProject} />
       <group ref={worldGroup}>
-        <CelestialBodies theme={props.theme} dusk={dusk} />
         <HabitatSea theme={props.theme} reducedMotion={props.reducedMotion} />
         {WORLD_MAP.modules.map((module) => {
           const zone = zoneByPlatform[module.id];
@@ -986,8 +1049,8 @@ export function WorldScene(props: Props) {
         <Vegetation theme={props.theme} reducedMotion={props.reducedMotion} />
         <RuinAccents theme={props.theme} />
         <Traveler nodeId={props.characterNodeId} path={props.path} phase={props.phase} theme={props.theme} reducedMotion={props.reducedMotion} />
-        <mesh position={[0, -1.15, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[38, 38]} />
+        <mesh position={[0, WORLD_SHADOW_PLANE_Y, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[WORLD_WATER_SIZE, WORLD_WATER_SIZE]} />
           <shadowMaterial color={new Color((props.theme === 'night' ? NIGHT : DAY).shadow)} opacity={props.theme === 'night' ? 0.42 : 0.19} transparent />
         </mesh>
       </group>

@@ -22,17 +22,18 @@ export function resolveLabelLayout(labels: readonly ProjectedLabel[], viewport: 
     const maxX = viewport.width - viewport.padding - source.width / 2;
     const minY = viewport.padding + source.height;
     const maxY = viewport.height - viewport.padding - source.height / 2;
+    const anchorY = Math.min(maxY, Math.max(minY, source.y));
     const label = {
       ...source,
       x: Math.min(maxX, Math.max(minX, source.x)),
-      y: Math.min(maxY, Math.max(minY, source.y)),
+      y: anchorY,
     };
     let attempt = 0;
     while (placed.some((candidate) => intersects(label, candidate)) && attempt < 8) {
       const ring = Math.floor(attempt / 2) + 1;
       const direction = attempt % 2 === 0 ? 1 : -1;
-      label.y = Math.min(maxY, Math.max(minY, source.y + direction * ring * (source.height + 8)));
       label.x = Math.min(maxX, Math.max(minX, source.x + direction * ring * 10));
+      label.y = anchorY;
       attempt += 1;
     }
     placed.push(label);

@@ -8,6 +8,7 @@ import {
   easeOutQuint,
   nearestEquivalentAngle,
   nudgeAngle,
+  carouselBulbGlow,
   carouselLightOpacity,
   carouselSpinSpeed,
   CAROUSEL_IDLE_SPIN_SPEED,
@@ -118,6 +119,17 @@ describe('world rotation motion', () => {
       expect(opacity).toBeLessThanOrEqual(0.8);
     }
     expect(carouselLightOpacity(0, false, true, false)).not.toBe(carouselLightOpacity(0.4, false, true, false));
+  });
+
+  it('breathes carousel bulbs in and out while lit with the orrery ring cadence', () => {
+    expect(carouselBulbGlow(0, false, false, false)).toBe(0);
+    expect(carouselBulbGlow(0, true, false, true)).toBe(0.6);
+    expect(carouselBulbGlow(0, true, false, false)).not.toBe(carouselBulbGlow(0.4, true, false, false));
+    for (const elapsed of [0, 0.35, 0.7, 1.1]) {
+      const glow = carouselBulbGlow(elapsed, true, false, false);
+      expect(glow).toBeGreaterThanOrEqual(0.26);
+      expect(glow).toBeLessThanOrEqual(0.6);
+    }
   });
 
   it('gives the carousel a visit burst that settles back to the idle spin', () => {

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
+  Color,
   Group,
   InstancedMesh,
   MathUtils,
   Mesh,
   MeshBasicMaterial,
+  MeshLambertMaterial,
   Object3D,
 } from 'three';
 import {
@@ -18,16 +20,20 @@ import {
 } from './tower-designs';
 import {
   AnimatedLambert,
+  DAY,
   DECOR_GROUND_SNAP,
   TOWER_WINDOW,
   TOWER_WINDOW_DAY_COLOR,
   TOWER_WINDOW_NIGHT_COLOR,
+  updateGoldRingLambert,
   useNightMix,
+  type PaletteKey,
   type WorldTheme,
 } from './world-materials';
 import {
   advanceTowerReaction,
   orreryBeamPose,
+  orreryBeaconGlow,
   orreryRingPose,
   pageBreathYaw,
   pagewellBookmarkTilt,
@@ -37,6 +43,7 @@ import {
   paradoxFramePose,
   PROJECT_COURT_REACTION_DURATIONS,
   projectCourtPose,
+  themeTransitionProgress,
   towerWindowGlow,
   type TowerReactionDurations,
   type TowerReactionState,
@@ -86,17 +93,60 @@ function useTowerReaction(
   return state;
 }
 
-function MergedParts({ parts, theme, reducedMotion }: {
+function MergedParts({ parts, theme, reducedMotion, beaconTones = [] }: {
   parts: readonly TonedPart[];
   theme: WorldTheme;
   reducedMotion: boolean;
+  beaconTones?: readonly PaletteKey[];
 }) {
   const meshes = useMemo(() => buildRuinMeshes(parts), [parts]);
+  const beaconSet = useMemo(() => new Set(beaconTones), [beaconTones]);
   return meshes.map(({ tone, geometry }) => (
     <mesh key={tone} geometry={geometry} castShadow receiveShadow>
-      <AnimatedLambert tone={tone} theme={theme} reducedMotion={reducedMotion} />
+      <AnimatedLambert
+        tone={tone}
+        theme={theme}
+        reducedMotion={reducedMotion}
+        beacon={beaconSet.has(tone as PaletteKey)}
+      />
     </mesh>
   ));
+}
+
+function OrreryRingMesh({ theme, active, reducedMotion }: {
+  theme: WorldTheme;
+  active: boolean;
+  reducedMotion: boolean;
+}) {
+  const material = useRef<MeshLambertMaterial>(null);
+  const from = useRef(new Color(DAY.sun));
+  const elapsed = useRef(0.9);
+  const { invalidate } = useThree();
+
+  useEffect(() => {
+    if (material.current) from.current.copy(material.current.color);
+    elapsed.current = 0;
+  }, [theme]);
+
+  useFrame(({ clock }, delta) => {
+    if (!material.current) return;
+    if (!reducedMotion) elapsed.current += delta;
+    else elapsed.current = 0.9;
+    const progress = themeTransitionProgress(elapsed.current);
+    const nightMix = theme === 'night' ? progress : 1 - progress;
+    const glow = orreryBeaconGlow(clock.elapsedTime, theme === 'night', active, reducedMotion);
+    updateGoldRingLambert(material.current, {
+      fromColor: from.current,
+      theme,
+      transitionProgress: progress,
+      emissiveMix: nightMix,
+      pulse: glow,
+    });
+    if (!reducedMotion && elapsed.current < 0.9) invalidate();
+    if (theme === 'night') invalidate();
+  });
+
+  return <meshLambertMaterial ref={material} color={DAY.sun} flatShading />;
 }
 
 function TowerWindows({
@@ -212,7 +262,7 @@ function ProjectCourtTower({ module, theme, active, reducedMotion, reactionSeque
         rotation={[0, Math.PI / 2, 0]}
         scale={[1, 1, 0.22]}
       >
-        <MergedParts parts={coralGantryAssembly.parts} theme={theme} reducedMotion={reducedMotion} />
+        <MergedParts parts={coralGantryAssembly.parts} theme={theme} reducedMotion={reducedMotion} beaconTones={['coral']} />
       </group>
       <TowerWindows parts={design.windows} theme={theme} active={active} reducedMotion={reducedMotion} />
     </TowerPlacement>
@@ -266,7 +316,7 @@ function PagewellTower({ module, theme, active, reducedMotion, reactionSequence 
         <AnimatedLambert tone="structure" theme={theme} />
       </instancedMesh>
       <group ref={bookmark} position={bookmarkAssembly.position}>
-        <MergedParts parts={bookmarkAssembly.parts} theme={theme} reducedMotion={reducedMotion} />
+        <MergedParts parts={bookmarkAssembly.parts} theme={theme} reducedMotion={reducedMotion} beaconTones={['coral']} />
       </group>
       <TowerWindows parts={design.windows} theme={theme} active={active} reducedMotion={reducedMotion} />
     </TowerPlacement>
@@ -335,7 +385,7 @@ function ParadoxGateTower({ module, theme, active, reducedMotion, reactionSequen
         <AnimatedLambert tone="olive" theme={theme} />
       </instancedMesh>
       <group ref={cube} position={cubeAssembly.position}>
-        <MergedParts parts={cubeAssembly.parts} theme={theme} reducedMotion={reducedMotion} />
+        <MergedParts parts={cubeAssembly.parts} theme={theme} reducedMotion={reducedMotion} beaconTones={['coral']} />
       </group>
       <TowerWindows parts={design.windows} theme={theme} active={active} reducedMotion={reducedMotion} />
     </TowerPlacement>
@@ -383,7 +433,7 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
 
   return (
     <TowerPlacement module={module}>
-      <MergedParts parts={design.staticParts} theme={theme} reducedMotion={reducedMotion} />
+      <MergedParts parts={design.staticParts} theme={theme} reducedMotion={reducedMotion} beaconTones={['coral']} />
       {ringAssemblies.map((ring, index) => (
         <group
           key={index}
@@ -391,7 +441,7 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
           position={ring.position}
         >
           <mesh geometry={ringMeshes[index]!.geometry} castShadow>
-            <AnimatedLambert tone="sun" theme={theme} />
+            <OrreryRingMesh theme={theme} active={active} reducedMotion={reducedMotion} />
           </mesh>
         </group>
       ))}

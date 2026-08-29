@@ -338,6 +338,12 @@ export function estimateTowerDesignBudget(
 }
 
 export function towerDesignEnvelope(design: TowerDesign): { width: number; height: number; depth: number } {
+  const bounds = designBounds(design);
+  const size = bounds.getSize(new Vector3());
+  return { width: size.x, height: size.y, depth: size.z };
+}
+
+function designBounds(design: TowerDesign): Box3 {
   const bounds = new Box3();
   design.extentParts.forEach((part) => {
     const geometry = partGeometry(part);
@@ -345,6 +351,9 @@ export function towerDesignEnvelope(design: TowerDesign): { width: number; heigh
     if (geometry.boundingBox) bounds.union(geometry.boundingBox);
     geometry.dispose();
   });
-  const size = bounds.getSize(new Vector3());
-  return { width: size.x, height: size.y, depth: size.z };
+  return bounds;
+}
+
+export function towerDesignTopY(design: TowerDesign): number {
+  return designBounds(design).max.y;
 }
