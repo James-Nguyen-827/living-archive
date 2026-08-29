@@ -11,10 +11,12 @@ import {
   carouselLightOpacity,
   carouselSpinSpeed,
   CAROUSEL_IDLE_SPIN_SPEED,
+  coralBeaconGlow,
   advanceTowerReaction,
   gateBlockPose,
   lanternRingSpin,
   orreryBeamPose,
+  orreryBeaconGlow,
   orreryRingPose,
   pagewellBookmarkTilt,
   pagewellFolioYaw,
@@ -148,6 +150,33 @@ describe('world rotation motion', () => {
       }
     }
     expect(towerWindowGlow(0, true, true, false)).not.toBe(towerWindowGlow(0.4, true, true, false));
+  });
+
+  it('glows orrery rings and hub at night only', () => {
+    expect(orreryBeaconGlow(0, false, false, false)).toBe(0);
+    expect(orreryBeaconGlow(0, true, false, false)).toBe(0.88);
+    expect(orreryBeaconGlow(0, true, true, true)).toBe(1);
+    expect(orreryBeaconGlow(0, true, true, false)).toBeGreaterThan(orreryBeaconGlow(0, true, false, false));
+  });
+
+  it('glows coral sculptures at night only with a gentle idle pulse', () => {
+    expect(coralBeaconGlow(0, false, false)).toBe(0);
+    expect(coralBeaconGlow(0, true, true)).toBe(0.9);
+    expect(coralBeaconGlow(0, true, false)).not.toBe(coralBeaconGlow(0.4, true, false));
+    for (const elapsed of [0, 0.35, 0.7, 1.1]) {
+      const glow = coralBeaconGlow(elapsed, true, false);
+      expect(glow).toBeGreaterThanOrEqual(0.85);
+      expect(glow).toBeLessThanOrEqual(0.95);
+    }
+  });
+
+  it('flickers the orrery beacon subtly when About is active at night', () => {
+    expect(orreryBeaconGlow(0, true, true, false)).not.toBe(orreryBeaconGlow(0.4, true, true, false));
+    for (const elapsed of [0, 0.35, 0.7, 1.1]) {
+      const opacity = orreryBeaconGlow(elapsed, true, true, false);
+      expect(opacity).toBeGreaterThanOrEqual(0.95);
+      expect(opacity).toBeLessThanOrEqual(1.05);
+    }
   });
 
   it('riffles archive slabs with staggered visit motion', () => {

@@ -24,6 +24,8 @@ import { buildRuinMeshes, type TonedPart } from './tower-designs';
 import { AmbientMotionDriver } from './use-ambient-tick';
 import {
   AnimatedLambert,
+  CORAL_BEACON_EMISSIVE_INTENSITY,
+  CORAL_BEACON_EMISSIVE_NIGHT_COLOR,
   DAY,
   DECOR_GROUND_SNAP,
   NIGHT,
@@ -32,7 +34,7 @@ import {
   type WorldTheme,
 } from './world-materials';
 import { WORLD_MAP, ZONE_NODES } from './world-map';
-import { easeOutQuint, nearestEquivalentAngle, rotatePointY, themeTransitionProgress, aboutSignalPose, cameraReframeProgress, carouselLightOpacity, carouselSpinSpeed, CAROUSEL_IDLE_SPIN_SPEED } from './world-motion';
+import { coralBeaconGlow, easeOutQuint, nearestEquivalentAngle, rotatePointY, themeTransitionProgress, cameraReframeProgress, carouselLightOpacity, carouselSpinSpeed, CAROUSEL_IDLE_SPIN_SPEED } from './world-motion';
 import type { ExperiencePhase, GridPoint, WorldModule, ZoneId } from './world-types';
 
 export type LabelProjectionHandler = (labels: readonly ProjectedLabel[]) => void;
@@ -216,7 +218,7 @@ function NightAmbience({
     <>
       <pointLight position={[-8, 3.4, -1]} intensity={theme === 'night' ? 1.55 : 0} color="#ffb38a" distance={10} />
       <pointLight position={[1, 4.6, -9]} intensity={theme === 'night' ? 1.4 : 0} color="#d7ecff" distance={9} />
-      <pointLight position={[8, 3.8, 9]} intensity={theme === 'night' ? 1.45 : 0} color="#ffc7a1" distance={10} />
+      <pointLight position={[8, 3.8, 9]} intensity={theme === 'night' ? 0.87 : 0} color="#ffc7a1" distance={10} />
     </>
   );
 }
@@ -347,7 +349,7 @@ function ZonePlatform({ module, zone, theme, selected, reducedMotion, reactionSe
   const group = useRef<Group>(null);
   const moss = useRef<MeshLambertMaterial>(null);
   const [hovered, setHovered] = useState(false);
-  useFrame((_state, delta) => {
+  useFrame((state, delta) => {
     if (!group.current || !moss.current) return;
     const active = hovered || selected;
     const lift = active && !reducedMotion ? 0.04 : 0;
@@ -355,6 +357,13 @@ function ZonePlatform({ module, zone, theme, selected, reducedMotion, reactionSe
     const palette = theme === 'night' ? NIGHT : DAY;
     const target = new Color(active ? palette.coral : palette.moss);
     moss.current.color.lerp(target, 1 - Math.exp(-delta * 13));
+    if (theme === 'night' && active) {
+      moss.current.emissive.copy(CORAL_BEACON_EMISSIVE_NIGHT_COLOR);
+      moss.current.emissiveIntensity = coralBeaconGlow(state.clock.elapsedTime, true, reducedMotion) * CORAL_BEACON_EMISSIVE_INTENSITY;
+    } else {
+      moss.current.emissive.set('#000000');
+      moss.current.emissiveIntensity = 0;
+    }
   });
   return (
     <group ref={group} position={module.transform.position} rotation={[0, module.transform.quarterTurns * Math.PI / 2, 0]}>
@@ -640,11 +649,11 @@ function Traveler({ nodeId, path, phase, theme, reducedMotion }: {
       {path.slice(1, 5).map((nodeId, index) => {
         const node = WORLD_MAP.nodes.find((item) => item.id === nodeId)!;
         return <mesh key={nodeId} position={[node.position[0], node.position[1] + 0.275, node.position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.22 + index * 0.025, 0.22 + index * 0.025]} /><AnimatedLambert tone="coral" theme={theme} />
+          <planeGeometry args={[0.22 + index * 0.025, 0.22 + index * 0.025]} /><AnimatedLambert tone="coral" theme={theme} reducedMotion={reducedMotion} />
         </mesh>;
       })}
       <group ref={ref}>
-        <mesh position={[0, 0.26, 0]} castShadow><cylinderGeometry args={[0.16, 0.22, 0.48, 6]} /><AnimatedLambert tone="coral" theme={theme} /></mesh>
+        <mesh position={[0, 0.26, 0]} castShadow><cylinderGeometry args={[0.16, 0.22, 0.48, 6]} /><AnimatedLambert tone="coral" theme={theme} reducedMotion={reducedMotion} /></mesh>
         <mesh position={[0, 0.64, 0]} castShadow><dodecahedronGeometry args={[0.18, 0]} /><AnimatedLambert tone="head" theme={theme} /></mesh>
       </group>
     </>
@@ -843,26 +852,6 @@ function HobbiesCarousel({ active, sequence, theme, reducedMotion, onSelect }: {
   );
 }
 
-function AboutSignal({ active, sequence, theme, reducedMotion }: {
-  active: boolean; sequence: number; theme: Props['theme']; reducedMotion: boolean;
-}) {
-  const ring = useRef<Mesh>(null);
-  const elapsed = useRef(1);
-  const { invalidate } = useThree();
-  useEffect(() => { if (active) { elapsed.current = 0; invalidate(); } }, [active, invalidate, sequence]);
-  useFrame((_state, delta) => {
-    if (!ring.current) return;
-    if (!reducedMotion) elapsed.current += delta;
-    const { scale, opacity } = aboutSignalPose(elapsed.current, active, reducedMotion);
-    ring.current.scale.setScalar(scale);
-    (ring.current.material as MeshBasicMaterial).opacity = opacity;
-    if (active && !reducedMotion && elapsed.current < 0.8) invalidate();
-  });
-  return <mesh ref={ring} position={[8, 4.6, 9]} rotation={[-Math.PI / 2, 0, 0]}>
-    <ringGeometry args={[0.38, 0.43, 16]} /><meshBasicMaterial color={(theme === 'night' ? NIGHT : DAY).coral} transparent opacity={0} depthWrite={false} />
-  </mesh>;
-}
-
 type RuinPiece = {
   position: [number, number, number];
   rotation?: [number, number, number];
@@ -1000,7 +989,6 @@ export function WorldScene(props: Props) {
           reducedMotion={props.reducedMotion}
           onSelect={() => props.onZoneRequest('hobbies')}
         />
-        <AboutSignal active={activeZone === 'about'} sequence={props.reactionSequence} theme={props.theme} reducedMotion={props.reducedMotion} />
         <InstancedTrees theme={props.theme} reducedMotion={props.reducedMotion} />
         <RuinAccents theme={props.theme} />
         <Traveler nodeId={props.characterNodeId} path={props.path} phase={props.phase} theme={props.theme} reducedMotion={props.reducedMotion} />

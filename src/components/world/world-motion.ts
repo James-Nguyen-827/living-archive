@@ -99,6 +99,24 @@ export function towerWindowGlow(elapsedSeconds: number, night: boolean, active: 
   return lit + Math.sin(elapsedSeconds * 2.8) * swing;
 }
 
+/** Coral sculptures: warm beacon glow at night with a gentle idle pulse. */
+export function coralBeaconGlow(elapsedSeconds: number, night: boolean, reducedMotion: boolean): number {
+  if (!night) return 0;
+  const idle = 0.9;
+  if (reducedMotion) return idle;
+  return idle + Math.sin(elapsedSeconds * 2.2) * 0.05;
+}
+
+/** Orrery rings and hub: always warm at night, brighter when About is active. */
+export function orreryBeaconGlow(elapsedSeconds: number, night: boolean, active: boolean, reducedMotion: boolean): number {
+  if (!night) return 0;
+  const idle = 0.88;
+  if (!active) return idle;
+  const lit = 1;
+  if (reducedMotion) return lit;
+  return lit + Math.sin(elapsedSeconds * 2.2) * 0.05;
+}
+
 export const TOWER_ARRIVAL_DURATION = 1.05;
 export const TOWER_EXIT_DURATION = 0.65;
 
