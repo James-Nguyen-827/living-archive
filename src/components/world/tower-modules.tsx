@@ -27,8 +27,6 @@ import {
 } from './world-materials';
 import {
   advanceTowerReaction,
-  gearhousePose,
-  keepPennantSway,
   orreryBeamPose,
   orreryRingPose,
   pageBreathYaw,
@@ -37,6 +35,7 @@ import {
   paradoxCubePose,
   paradoxFrameIdleSpin,
   paradoxFramePose,
+  projectCourtPose,
   towerWindowGlow,
   type TowerReactionState,
 } from './world-motion';
@@ -155,46 +154,54 @@ function assembly(design: ReturnType<typeof towerDesign>, key: string): TowerAss
   return value;
 }
 
-function GearhouseTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
+function ProjectCourtTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
   const height = module.size[1];
-  const design = useMemo(() => towerDesign('gearhouse', height), [height]);
+  const design = useMemo(() => towerDesign('project-court', height), [height]);
   const reaction = useTowerReaction(active, reactionSequence, reducedMotion);
-  const room = useRef<Group>(null);
-  const stair = useRef<Group>(null);
-  const piston = useRef<Group>(null);
-  const signal = useRef<Group>(null);
-  const roomAssembly = assembly(design, 'room');
-  const stairAssembly = assembly(design, 'stair');
-  const pistonAssembly = assembly(design, 'piston');
-  const signalAssembly = assembly(design, 'signal');
+  const rearSlab = useRef<Group>(null);
+  const frontSlab = useRef<Group>(null);
+  const coralBridge = useRef<Group>(null);
+  const rearSlabAssembly = assembly(design, 'rear-slab');
+  const frontSlabAssembly = assembly(design, 'front-slab');
+  const coralBridgeAssembly = assembly(design, 'coral-bridge');
 
   useFrame(({ clock }) => {
     const progress = reaction.current.progress;
-    const pose = gearhousePose(progress);
-    if (room.current) room.current.rotation.y = pose.roomYaw;
-    if (stair.current) stair.current.rotation.y = pose.stairYaw;
-    if (piston.current) piston.current.position.y = pistonAssembly.position[1] + pose.pistonLift;
-    if (signal.current) {
+    const pose = projectCourtPose(progress);
+    if (rearSlab.current) rearSlab.current.rotation.y = pose.rearSlabYaw;
+    if (frontSlab.current) frontSlab.current.rotation.y = pose.frontSlabYaw;
+    if (coralBridge.current) {
       const idle = 1 - progress;
-      signal.current.rotation.z = keepPennantSway(clock.elapsedTime, reducedMotion) * idle;
-      signal.current.position.y = reducedMotion ? 0 : Math.sin(clock.elapsedTime * 1.15) * 0.025 * idle;
+      const hover = reducedMotion ? 0 : Math.sin(clock.elapsedTime * 1.15) * 0.02 * idle;
+      const tilt = reducedMotion ? 0 : Math.sin(clock.elapsedTime * 0.8) * 0.025 * idle;
+      coralBridge.current.rotation.x = pose.bridgeRoll + tilt;
+      coralBridge.current.position.y = coralBridgeAssembly.position[1] + pose.bridgeLift + hover;
     }
   });
 
   return (
     <TowerPlacement module={module}>
       <MergedParts parts={design.staticParts} theme={theme} />
-      <group ref={room} position={roomAssembly.position}>
-        <MergedParts parts={roomAssembly.parts} theme={theme} />
+      <group
+        ref={rearSlab}
+        position={rearSlabAssembly.position}
+        rotation={[0, -Math.PI / 2, 0]}
+      >
+        <MergedParts parts={rearSlabAssembly.parts} theme={theme} />
       </group>
-      <group ref={stair} position={stairAssembly.position} rotation={[0, -Math.PI / 4, 0]}>
-        <MergedParts parts={stairAssembly.parts} theme={theme} />
+      <group ref={frontSlab} position={frontSlabAssembly.position}>
+        <MergedParts parts={frontSlabAssembly.parts} theme={theme} />
       </group>
-      <group ref={piston} position={pistonAssembly.position}>
-        <MergedParts parts={pistonAssembly.parts} theme={theme} />
-      </group>
-      <group ref={signal} position={signalAssembly.position}>
-        <MergedParts parts={signalAssembly.parts} theme={theme} />
+      <group
+        ref={coralBridge}
+        position={[
+          coralBridgeAssembly.position[0],
+          coralBridgeAssembly.position[1] + 0.18,
+          coralBridgeAssembly.position[2],
+        ]}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
+        <MergedParts parts={coralBridgeAssembly.parts} theme={theme} />
       </group>
       <TowerWindows parts={design.windows} theme={theme} active={active} reducedMotion={reducedMotion} />
     </TowerPlacement>
@@ -396,7 +403,7 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
 export function TowerModule({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
   const archetype = towerArchetypeFromModuleId(module.id);
   switch (archetype) {
-    case 'gearhouse': return <GearhouseTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
+    case 'project-court': return <ProjectCourtTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
     case 'pagewell': return <PagewellTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
     case 'paradox-gate': return <ParadoxGateTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
     case 'orrery': return <OrreryBeaconTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;

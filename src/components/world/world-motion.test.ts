@@ -12,9 +12,7 @@ import {
   carouselSpinSpeed,
   CAROUSEL_IDLE_SPIN_SPEED,
   advanceTowerReaction,
-  gearhousePose,
   gateBlockPose,
-  keepCrankTurn,
   lanternRingSpin,
   orreryBeamPose,
   orreryRingPose,
@@ -24,6 +22,7 @@ import {
   paradoxCubePose,
   paradoxFrameIdleSpin,
   paradoxFramePose,
+  projectCourtPose,
   rotatePointY,
   signalBarProgress,
   themeTransitionProgress,
@@ -151,14 +150,6 @@ describe('world rotation motion', () => {
     expect(towerWindowGlow(0, true, true, false)).not.toBe(towerWindowGlow(0.4, true, true, false));
   });
 
-  it('cranks the work keep drum a quarter-turn on visit', () => {
-    expect(keepCrankTurn(0, false, false)).toBe(0);
-    expect(keepCrankTurn(0, true, true)).toBeCloseTo(Math.PI / 2);
-    expect(keepCrankTurn(0.62, true, false)).toBeCloseTo(Math.PI / 2);
-    expect(keepCrankTurn(0.31, true, false)).toBeGreaterThan(0);
-    expect(keepCrankTurn(0.31, true, false)).toBeLessThan(Math.PI / 2);
-  });
-
   it('riffles archive slabs with staggered visit motion', () => {
     expect(pageRiffleYaw(0, 0, false, false)).toBe(0);
     expect(pageRiffleYaw(0, 1, false, false)).toBeGreaterThan(0);
@@ -209,15 +200,39 @@ describe('narrative tower reactions', () => {
     expect(advanceTowerReaction({ progress: 0.6, sequence: 2 }, 0, false, 2, true).progress).toBe(0);
   });
 
-  it('turns the Gearhouse room, aligns its stair, and raises its piston', () => {
-    expect(gearhousePose(0)).toEqual({ roomYaw: 0, stairYaw: -Math.PI / 4, pistonLift: 0 });
+  it('stages the Project Court slabs before lowering its coral bridge', () => {
+    const neutral = {
+      rearSlabYaw: -Math.PI / 2,
+      frontSlabYaw: 0,
+      bridgeRoll: Math.PI / 2,
+      bridgeLift: 0.18,
+    };
+    const held = {
+      rearSlabYaw: 0,
+      frontSlabYaw: -Math.PI / 2,
+      bridgeRoll: 0,
+      bridgeLift: 0,
+    };
 
-    const midpoint = gearhousePose(0.5);
-    const active = gearhousePose(1);
-    expect(midpoint.roomYaw).toBeGreaterThan(Math.PI / 4);
-    expect(active.roomYaw).toBeCloseTo(Math.PI / 2);
-    expect(active.stairYaw).toBeCloseTo(0);
-    expect(active.pistonLift).toBeCloseTo(0.22);
+    expect(projectCourtPose(-1)).toEqual(neutral);
+    expect(projectCourtPose(0)).toEqual(neutral);
+
+    const early = projectCourtPose(0.1);
+    expect(early.rearSlabYaw).toBeGreaterThan(neutral.rearSlabYaw);
+    expect(early.frontSlabYaw).toBe(neutral.frontSlabYaw);
+    expect(early.bridgeRoll).toBe(neutral.bridgeRoll);
+
+    const midpoint = projectCourtPose(0.5);
+    expect(midpoint.rearSlabYaw).toBeGreaterThan(early.rearSlabYaw);
+    expect(midpoint.frontSlabYaw).toBeLessThan(neutral.frontSlabYaw);
+    expect(midpoint.bridgeRoll).toBe(neutral.bridgeRoll);
+
+    const closing = projectCourtPose(0.75);
+    expect(closing.bridgeRoll).toBeLessThan(neutral.bridgeRoll);
+    expect(closing.bridgeLift).toBeLessThan(neutral.bridgeLift);
+
+    expect(projectCourtPose(1)).toEqual(held);
+    expect(projectCourtPose(2)).toEqual(held);
   });
 
   it('fans the Pagewell folios in a rising wave and tips its bookmark', () => {

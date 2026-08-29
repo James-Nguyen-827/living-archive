@@ -129,21 +129,28 @@ export function advanceTowerReaction(
   };
 }
 
-export interface GearhousePose {
-  roomYaw: number;
-  stairYaw: number;
-  pistonLift: number;
+export interface ProjectCourtPose {
+  rearSlabYaw: number;
+  frontSlabYaw: number;
+  bridgeRoll: number;
+  bridgeLift: number;
 }
 
-/** Work Gearhouse: the room turns, the cantilever stair aligns, and the cap piston rises. */
-export function gearhousePose(progress: number): GearhousePose {
+function stagedTowerProgress(progress: number, start: number, end: number): number {
+  return easeOutQuint((progress - start) / (end - start));
+}
+
+/** Work Project Court: two quarter-turn slabs resolve before the coral bridge closes. */
+export function projectCourtPose(progress: number): ProjectCourtPose {
   const clamped = Math.min(1, Math.max(0, progress));
-  const eased = easeOutQuint(clamped);
-  const pistonOvershoot = Math.sin(clamped * Math.PI) * 0.018;
+  const rearProgress = stagedTowerProgress(clamped, 0, 0.54);
+  const frontProgress = stagedTowerProgress(clamped, 0.14, 0.7);
+  const bridgeProgress = stagedTowerProgress(clamped, 0.58, 1);
   return {
-    roomYaw: eased * Math.PI / 2,
-    stairYaw: -Math.PI / 4 + eased * Math.PI / 4,
-    pistonLift: eased * 0.22 + pistonOvershoot,
+    rearSlabYaw: -Math.PI / 2 + rearProgress * Math.PI / 2,
+    frontSlabYaw: frontProgress === 0 ? 0 : -frontProgress * Math.PI / 2,
+    bridgeRoll: (1 - bridgeProgress) * Math.PI / 2,
+    bridgeLift: (1 - bridgeProgress) * 0.18,
   };
 }
 
@@ -249,29 +256,6 @@ export function orreryBeamPose(progress: number, inwardYaw: number): { yaw: numb
     yaw: inwardYaw - 0.9 * (1 - eased),
     opacity: eased * 0.34,
   };
-}
-
-/** Work keep drum: a quarter-turn crank on visit. */
-export function keepCrankTurn(elapsedSeconds: number, active: boolean, reducedMotion: boolean): number {
-  if (!active) return 0;
-  if (reducedMotion) return Math.PI / 2;
-  return easeOutQuint(Math.min(1, elapsedSeconds / 0.62)) * (Math.PI / 2);
-}
-
-/** Work keep capstone lift with a tiny overshoot settle. */
-export function keepCapstoneLift(elapsedSeconds: number, active: boolean, reducedMotion: boolean): number {
-  if (!active) return 0;
-  if (reducedMotion) return 0.12;
-  const progress = Math.min(1, elapsedSeconds / 0.62);
-  const lift = easeOutQuint(progress) * 0.12;
-  const overshoot = progress > 0.55 ? Math.sin((elapsedSeconds - 0.34) * 9) * 0.018 * (1 - progress) : 0;
-  return lift + overshoot;
-}
-
-/** Work keep pennant idle sway. */
-export function keepPennantSway(elapsedSeconds: number, reducedMotion: boolean): number {
-  if (reducedMotion) return 0;
-  return Math.sin(elapsedSeconds * 1.8) * 0.045;
 }
 
 const ARCHIVE_SLAB_TWIST = Math.PI / 30;

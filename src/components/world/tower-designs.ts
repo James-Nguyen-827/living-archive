@@ -9,7 +9,7 @@ import {
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { PaletteKey } from './world-materials';
 
-export type TowerArchetype = 'gearhouse' | 'pagewell' | 'paradox-gate' | 'orrery';
+export type TowerArchetype = 'project-court' | 'pagewell' | 'paradox-gate' | 'orrery';
 export type CompassFace = 'north' | 'east' | 'south' | 'west';
 
 export type TonedPart<Tone extends string = PaletteKey> = {
@@ -39,7 +39,7 @@ export interface TowerDesign {
 
 export function towerArchetypeFromModuleId(moduleId: string): TowerArchetype {
   switch (moduleId) {
-    case 'work-tower': return 'gearhouse';
+    case 'work-tower': return 'project-court';
     case 'notes-tower': return 'pagewell';
     case 'experiments-tower': return 'paradox-gate';
     default: return 'orrery';
@@ -114,56 +114,51 @@ function translatedAssemblyParts(assembly: TowerAssembly): readonly TonedPart[] 
   }));
 }
 
-function gearhouseDesign(height: number): TowerDesign {
+function projectCourtDesign(_height: number): TowerDesign {
   const staticParts: readonly TonedPart[] = [
-    { position: [0, 0.1, 0], size: [1.4, 0.2, 1.18], tone: 'structure' },
-    { position: [0, 0.66, 0], size: [0.82, 1.12, 0.78], tone: 'surface' },
-    { position: [-0.5, 0.5, 0.22], size: [0.2, 0.72, 0.34], tone: 'structure' },
-    { position: [0.5, 0.5, -0.22], size: [0.2, 0.72, 0.34], tone: 'structure' },
-    { position: [0, 1.02, 0], size: [1.06, 0.12, 0.94], tone: 'structure' },
-    { position: [0, 1.98, 0], size: [0.46, 0.78, 0.46], tone: 'surface' },
-    { position: [0, 2.35, 0], size: [0.68, 0.1, 0.68], tone: 'structure' },
+    { position: [0, 0.1, 0], size: [1.62, 0.2, 1.54], tone: 'structure' },
+    { position: [-0.54, 1.02, -0.48], size: [0.36, 1.84, 0.4], tone: 'surface' },
+    { position: [-0.22, 0.48, -0.48], size: [0.64, 0.56, 0.34], tone: 'surface' },
+    { position: [-0.42, 1.98, -0.48], size: [0.64, 0.12, 0.5], tone: 'structure' },
+    { position: [-0.3, 1.5, -0.48], size: [0.8, 0.12, 0.5], tone: 'structure' },
+    { position: [0.5, 0.75, 0.46], size: [0.44, 1.3, 0.44], tone: 'surface' },
+    { position: [0.5, 0.42, 0.12], size: [0.42, 0.64, 0.7], tone: 'surface' },
+    { position: [0.26, 1.43, 0.3], size: [0.9, 0.12, 0.76], tone: 'structure' },
+    { position: [0.5, 1.74, 0.46], size: [0.22, 0.56, 0.22], tone: 'structure' },
   ];
   const assemblies: Readonly<Record<string, TowerAssembly>> = {
-    room: {
-      position: [0, 1.34, 0],
+    'rear-slab': {
+      position: [-0.54, 2.08, -0.48],
       parts: [
-        { position: [0, 0, 0], size: [1.22, 0.54, 0.56], tone: 'surface' },
-        { position: [0, 0.31, 0], size: [1.32, 0.08, 0.64], tone: 'structure' },
+        { position: [0.51, 0, 0], size: [1.08, 0.16, 0.32], tone: 'structure' },
+        { position: [0.25, -0.18, 0], size: [0.5, 0.24, 0.24], tone: 'surface' },
       ],
     },
-    stair: {
-      position: [-0.28, 1.08, 0.4],
-      parts: Array.from({ length: 5 }, (_unused, index): TonedPart => ({
-        position: [-index * 0.11, index * 0.075, 0],
-        size: [0.25, 0.08, 0.32],
-        tone: 'structure',
-      })),
-    },
-    piston: {
-      position: [0, height - 0.04, 0],
+    'front-slab': {
+      position: [0.5, 2.08, 0.46],
       parts: [
-        { position: [0, 0, 0], size: [0.32, 0.18, 0.32], tone: 'coral' },
-        { position: [0, 0.15, 0], size: [0.14, 0.16, 0.14], tone: 'coral' },
+        { position: [-0.49, 0, 0], size: [1.04, 0.16, 0.34], tone: 'structure' },
+        { position: [-0.25, -0.18, 0], size: [0.52, 0.24, 0.26], tone: 'surface' },
       ],
     },
-    signal: {
-      position: [0, 0, 0],
+    'coral-bridge': {
+      position: [-0.54, 2.17, 0],
       parts: [
-        { position: [0.66, 1.68, 0.16], size: [0.18, 0.28, 0.18], tone: 'coral' },
-        { position: [0.24, height + 0.26, 0.18], size: [0.04, 0.34, 0.03], tone: 'coral' },
-        { position: [0.36, height + 0.38, 0.18], size: [0.22, 0.1, 0.03], tone: 'coral' },
+        { position: [0, 0, 0], size: [0.28, 0.16, 0.94], tone: 'coral' },
       ],
     },
   };
   const extentParts: readonly TonedPart[] = [
     ...staticParts,
     ...Object.values(assemblies).flatMap(translatedAssemblyParts),
-    { position: [0, 1.5, 0], size: [1.4, 3, 1.18], tone: 'surface' as const },
+    { position: [0, 1.42, 0], size: [1.78, 2.84, 1.78], tone: 'surface' as const },
   ];
   return {
     staticParts,
-    windows: fourFaceWindows(0.82, 0.78, [0.52, 0.84]),
+    windows: [
+      ...fourFaceWindows(0.36, 0.4, [0.88], -0.54, -0.48),
+      ...fourFaceWindows(0.44, 0.44, [0.72], 0.5, 0.46),
+    ],
     assemblies,
     extentParts,
   };
@@ -304,7 +299,7 @@ function orreryDesign(height: number): TowerDesign {
 
 export function towerDesign(archetype: TowerArchetype, height: number): TowerDesign {
   switch (archetype) {
-    case 'gearhouse': return gearhouseDesign(height);
+    case 'project-court': return projectCourtDesign(height);
     case 'pagewell': return pagewellDesign(height);
     case 'paradox-gate': return paradoxGateDesign(height);
     case 'orrery': return orreryDesign(height);
