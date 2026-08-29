@@ -177,11 +177,11 @@ function projectCourtDesign(_height: number): TowerDesign {
   };
 }
 
-function indexEngineCPieceParts(): readonly TonedPart[] {
+function indexEngineKeyedPieceParts(tone: PaletteKey): readonly TonedPart[] {
   return [
-    { position: [-0.18, 0, 0], size: [0.12, 0.62, 0.2], tone: 'surface' },
-    { position: [0.04, 0.26, 0], size: [0.44, 0.12, 0.2], tone: 'surface' },
-    { position: [0.04, -0.26, 0], size: [0.44, 0.12, 0.2], tone: 'surface' },
+    { position: [-0.18, 0, 0], size: [0.12, 0.62, 0.2], tone },
+    { position: [0.04, 0.26, 0], size: [0.44, 0.12, 0.2], tone },
+    { position: [0.04, -0.26, 0], size: [0.44, 0.12, 0.2], tone },
   ];
 }
 
@@ -195,20 +195,19 @@ function indexEngineDesign(height: number): TowerDesign {
     { position: [0.38, height * 0.4, 0.1], size: [0.1, 0.1, 0.76], tone: 'structure' },
     { position: [0.19, height * 0.4, -0.28], size: [0.42, 0.1, 0.1], tone: 'structure' },
   ];
-  const cPiece = indexEngineCPieceParts();
+  const chamberPiece = indexEngineKeyedPieceParts('structure');
+  const crownPiece = indexEngineKeyedPieceParts('surface');
   const assemblies: Readonly<Record<string, TowerAssembly>> = {
-    'chamber-0': { position: [0.38, 0.85, 0.15], scale: [1, 0.85, 1], instanceGroup: 'index-engine-pieces', parts: cPiece },
-    'chamber-1': { position: [-0.3, 1.63, -0.16], scale: [0.92, 0.92, 0.92], rotation: [0, Math.PI / 2, 0], instanceGroup: 'index-engine-pieces', parts: cPiece },
-    'chamber-2': { position: [0.28, 2.4, -0.15], scale: [1.05, 0.9, 1], rotation: [0, Math.PI, 0], instanceGroup: 'index-engine-pieces', parts: cPiece },
-    'chamber-3': { position: [-0.35, 3.16, 0.14], scale: [0.94, 0.88, 0.94], rotation: [0, Math.PI * 1.5, 0], instanceGroup: 'index-engine-pieces', parts: cPiece },
-    'crown-half-0': { position: [0.2, 4.0, 0.1], scale: [1.1, 0.9, 1], instanceGroup: 'index-engine-pieces', parts: cPiece },
-    'crown-half-1': { position: [-0.2, 4.0, -0.1], scale: [1.1, 0.9, 1], rotation: [0, Math.PI, 0], instanceGroup: 'index-engine-pieces', parts: cPiece },
+    'chamber-0': { position: [0.38, 0.85, 0.15], scale: [1, 0.85, 1], instanceGroup: 'index-engine-chambers', parts: chamberPiece },
+    'chamber-1': { position: [-0.3, 1.63, -0.16], scale: [0.92, 0.92, 0.92], rotation: [0, Math.PI / 2, 0], instanceGroup: 'index-engine-chambers', parts: chamberPiece },
+    'chamber-2': { position: [0.28, 2.4, -0.15], scale: [1.05, 0.9, 1], rotation: [0, Math.PI, 0], instanceGroup: 'index-engine-chambers', parts: chamberPiece },
+    'chamber-3': { position: [-0.35, 3.16, 0.14], scale: [0.94, 0.88, 0.94], rotation: [0, Math.PI * 1.5, 0], instanceGroup: 'index-engine-chambers', parts: chamberPiece },
+    'crown-half-0': { position: [0.2, 4.0, 0.1], scale: [1.1, 0.9, 1], instanceGroup: 'index-engine-crown', parts: crownPiece },
+    'crown-half-1': { position: [-0.2, 4.0, -0.1], scale: [1.1, 0.9, 1], rotation: [0, Math.PI, 0], instanceGroup: 'index-engine-crown', parts: crownPiece },
     'coral-carriage': {
       position: [0, 4.38, 0],
       parts: [
-        { position: [0, 0, 0], size: [0.28, 0.2, 0.28], tone: 'coral' },
-        { position: [0, -0.15, 0], size: [0.1, 0.16, 0.1], tone: 'coral' },
-        { position: [0, -0.23, 0.1], size: [0.2, 0.06, 0.08], tone: 'coral' },
+        { position: [0, 0, 0], size: [0.28, 0.28, 0.28], tone: 'coral' },
       ],
     },
   };
@@ -291,6 +290,10 @@ function ellipseRingParts(radiusX: number, radiusZ: number, segments: number): r
   });
 }
 
+function circleRingParts(radius: number, segments: number): readonly TonedPart[] {
+  return ellipseRingParts(radius, radius, segments);
+}
+
 function orreryDesign(height: number): TowerDesign {
   const ringY = height * 0.9;
   const staticParts: readonly TonedPart[] = [
@@ -302,9 +305,9 @@ function orreryDesign(height: number): TowerDesign {
     { position: [0, ringY, 0], size: [0.22, 0.22, 0.22], tone: 'coral' },
   ];
   const assemblies: Readonly<Record<string, TowerAssembly>> = {
-    'ring-0': { position: [0, ringY, 0], parts: ellipseRingParts(0.76, 0.61, 16) },
-    'ring-1': { position: [0, ringY, 0], parts: ellipseRingParts(0.67, 0.52, 14) },
-    'ring-2': { position: [0, ringY, 0], parts: ellipseRingParts(0.5, 0.39, 12) },
+    'ring-0': { position: [0, ringY, 0], parts: circleRingParts(0.76, 16) },
+    'ring-1': { position: [0, ringY, 0], parts: circleRingParts(0.67, 14) },
+    'ring-2': { position: [0, ringY, 0], parts: circleRingParts(0.5, 12) },
   };
   const extentParts: readonly TonedPart[] = [
     ...staticParts,

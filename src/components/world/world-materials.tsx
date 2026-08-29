@@ -28,6 +28,14 @@ export const ORRERY_RING_GLOW_DAY_COLOR = new Color(ORRERY_RING_GLOW.day);
 export const ORRERY_RING_GLOW_NIGHT_COLOR = new Color(ORRERY_RING_GLOW.night);
 export const ORRERY_HUB_GLOW_DAY_COLOR = new Color(ORRERY_HUB_GLOW.day);
 export const ORRERY_HUB_GLOW_NIGHT_COLOR = new Color(ORRERY_HUB_GLOW.night);
+export const LANDING_PAD = { day: '#E8E0D0', night: '#7A7468' };
+/** Landing pad compass frame uses the same warm window tones as zone towers. */
+export const LANDING_PAD_TILE = TOWER_WINDOW;
+export const LANDING_PAD_DAY_COLOR = new Color(LANDING_PAD.day);
+export const LANDING_PAD_NIGHT_COLOR = new Color(LANDING_PAD.night);
+export const LANDING_PAD_TILE_DAY_COLOR = TOWER_WINDOW_DAY_COLOR;
+export const LANDING_PAD_TILE_NIGHT_COLOR = TOWER_WINDOW_NIGHT_COLOR;
+export const LANDING_PAD_FRAME_EMISSIVE_INTENSITY = 2.5;
 export const DECOR_GROUND_SNAP = 0.25;
 
 export type WorldTheme = 'day' | 'night';
@@ -68,6 +76,46 @@ export function updateCoralBeaconLambert(
 }
 
 export const ORRERY_RING_EMISSIVE_INTENSITY = 2.5;
+
+export function updateLandingPadLambert(
+  material: MeshLambertMaterial,
+  {
+    fromColor,
+    theme,
+    transitionProgress,
+  }: {
+    fromColor: Color;
+    theme: WorldTheme;
+    transitionProgress: number;
+    emissiveMix?: number;
+    pulse?: number;
+  },
+) {
+  const target = theme === 'night' ? LANDING_PAD_NIGHT_COLOR : LANDING_PAD_DAY_COLOR;
+  material.color.lerpColors(fromColor, target, transitionProgress);
+  material.emissive.set('#000000');
+  material.emissiveIntensity = 0;
+}
+
+export function updateLandingPadFrameLambert(
+  material: MeshLambertMaterial,
+  {
+    nightMix,
+    glow,
+  }: {
+    nightMix: number;
+    glow: number;
+  },
+) {
+  material.color.lerpColors(TOWER_WINDOW_DAY_COLOR, TOWER_WINDOW_NIGHT_COLOR, nightMix);
+  if (nightMix > 0.01) {
+    material.emissive.copy(TOWER_WINDOW_NIGHT_COLOR);
+    material.emissiveIntensity = nightMix * glow * LANDING_PAD_FRAME_EMISSIVE_INTENSITY;
+  } else {
+    material.emissive.set('#000000');
+    material.emissiveIntensity = 0;
+  }
+}
 
 export function updateGoldRingLambert(
   material: MeshLambertMaterial,

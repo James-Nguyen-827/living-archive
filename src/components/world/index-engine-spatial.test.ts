@@ -21,11 +21,11 @@ const CROWN_SOCKET_CONTACT = {
   progressEnd: 0.78,
 } as const;
 
-/** Carriage departs from the seated coral cap at the neutral crown. */
-const CARRIAGE_CROWN_DEPARTURE = {
+/** Carriage redocks with the crown only during the final docking beat. */
+const CARRIAGE_CROWN_DOCKED = {
   carriage: 'coral-carriage',
   crowns: CROWN_KEYS,
-  progressEnd: 0.06,
+  progressStart: 0.94,
 } as const;
 
 function collisionKey(firstKey: string, firstPart: number, secondKey: string, secondPart: number): string {
@@ -45,10 +45,10 @@ function isAllowedCollision(
     return true;
   }
   if (
-    progress <= CARRIAGE_CROWN_DEPARTURE.progressEnd
+    progress >= CARRIAGE_CROWN_DOCKED.progressStart
     && (
-      (firstKey === CARRIAGE_CROWN_DEPARTURE.carriage && CARRIAGE_CROWN_DEPARTURE.crowns.includes(secondKey as typeof CROWN_KEYS[number]))
-      || (secondKey === CARRIAGE_CROWN_DEPARTURE.carriage && CARRIAGE_CROWN_DEPARTURE.crowns.includes(firstKey as typeof CROWN_KEYS[number]))
+      (firstKey === CARRIAGE_CROWN_DOCKED.carriage && CARRIAGE_CROWN_DOCKED.crowns.includes(secondKey as typeof CROWN_KEYS[number]))
+      || (secondKey === CARRIAGE_CROWN_DOCKED.carriage && CARRIAGE_CROWN_DOCKED.crowns.includes(firstKey as typeof CROWN_KEYS[number]))
     )
   ) {
     return true;

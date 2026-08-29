@@ -41,8 +41,8 @@ The four zone towers are narrative “impossible mechanisms”: a shared Monumen
 
 | Landmark | Zone | Silhouette | Arrival and held pose | Neutral ambient life |
 | --- | --- | --- | --- | --- |
-| Project Court (`work-tower`) | Work | Two unequal L-shaped wings frame an open diagonal courtyard | Front terrace unfolds first; at 0.48s the rear terrace and coral gantry rise, travel, extend, and seat together across the court | Gantry rests compact in its rear cradle |
-| Index Engine (`notes-tower`) | Field Notes | Stepped base, offset spine, warm-lit core, exterior guide rail, four keyed chambers, and two crown halves | A coral carriage drops, climbs the guide, unlocks four chambers, splits the crown, and redocks as the cap | Coral carriage floats subtly at the neutral crown |
+| Project Court (`work-tower`) | Work | Two unequal L-shaped wings frame an open diagonal courtyard | Front terrace unfolds first; at 0.48s the rear terrace and coral gantry rise, travel, extend, and seat together across the court | Gantry hovers and wobbles in its rear cradle; held pose adds seated beam tension and terrace micro-settle |
+| Index Engine (`notes-tower`) | Field Notes | Stepped base, offset spine, warm-lit core, exterior guide rail, four keyed chambers, and two crown halves | Chambers unlock upward while the coral cap stays seated, then drifts up slowly with a lazy summit spin as the crown opens | Coral carriage floats subtly at the neutral crown |
 | Paradox Gate (`experiments-tower`) | Experiments | Wide twin-pier portal with dark nested frames | Frames resolve into a 0°/45°/90° aperture and hold the coral cube | Nested frames counter-spin; cube hovers and turns |
 | Orrery Beacon (`about-tower`) | About | Slender offset beacon with a large segmented halo | Three rings align and hold a warm inward-facing beam | Rings counter-rotate slowly |
 

@@ -92,13 +92,20 @@ describe('narrative tower designs', () => {
       'coral-carriage',
     ]);
     expect(new Set(keyedPieces.map((key) => design.assemblies[key]?.instanceGroup))).toEqual(
-      new Set(['index-engine-pieces']),
+      new Set(['index-engine-chambers', 'index-engine-crown']),
     );
-    expect(keyedPieces.map((key) => design.assemblies[key]?.parts)).toEqual(
-      Array.from({ length: keyedPieces.length }, () => design.assemblies['chamber-0']?.parts),
+    expect(keyedPieces.slice(0, 4).map((key) => design.assemblies[key]?.parts)).toEqual(
+      Array.from({ length: 4 }, () => design.assemblies['chamber-0']?.parts),
     );
+    expect(keyedPieces.slice(4).map((key) => design.assemblies[key]?.parts)).toEqual(
+      Array.from({ length: 2 }, () => design.assemblies['crown-half-0']?.parts),
+    );
+    expect(design.assemblies['chamber-0']?.parts.every((part) => part.tone === 'structure')).toBe(true);
+    expect(design.assemblies['crown-half-0']?.parts.every((part) => part.tone === 'surface')).toBe(true);
     expect(design.assemblies['chamber-0']?.parts).toHaveLength(3);
-    expect(design.assemblies['coral-carriage']?.parts.every((part) => part.tone === 'coral')).toBe(true);
+    expect(design.assemblies['coral-carriage']?.parts).toEqual([
+      { position: [0, 0, 0], size: [0.28, 0.28, 0.28], tone: 'coral' },
+    ]);
     expect(design.staticParts.some((part) => part.size[0] > 1.3)).toBe(true);
     expect(design.staticParts.some((part) => part.size[1] > 3.5 && part.position[0] < 0)).toBe(true);
   });
@@ -108,7 +115,7 @@ describe('narrative tower designs', () => {
     const budget = estimateTowerDesignBudget('index-engine', 4.5);
     const envelope = towerDesignEnvelope(design);
 
-    expect(budget.drawCalls).toBe(5);
+    expect(budget.drawCalls).toBe(6);
     expect(budget.triangles).toBeLessThanOrEqual(720);
     expect(envelope.width).toBeLessThanOrEqual(1.8);
     expect(envelope.depth).toBeLessThanOrEqual(1.8);

@@ -1,6 +1,7 @@
 import type {
   CardinalDirection,
   GridPoint,
+  QuarterTurn,
   WalkNode,
   WorldMap,
   WorldModule,
@@ -9,10 +10,13 @@ import type {
 } from './world-types';
 
 const ALL_EDGES: readonly CardinalDirection[] = ['north', 'east', 'south', 'west'];
-const transform = (position: GridPoint, quarterTurns: 0 | 1 | 2 | 3 = 0): WorldModule['transform'] => ({
-  position,
-  quarterTurns,
-});
+const transform = (
+  position: GridPoint,
+  quarterTurns: QuarterTurn = 0,
+  yawRadians?: number,
+): WorldModule['transform'] => (yawRadians === undefined
+  ? { position, quarterTurns }
+  : { position, quarterTurns, yawRadians });
 
 const modules: WorldModule[] = [
   { id: 'central-platform', kind: 'platform', size: [5, 0.25, 5], transform: transform([0, 0, 0]) },
@@ -33,11 +37,10 @@ const modules: WorldModule[] = [
   { id: 'about-bridge', kind: 'bridge', size: [1, 0.25, 3], transform: transform([8, 1, 4]), bridgeNodeIds: ['about-02', 'about-05'] },
   { id: 'about-landing', kind: 'bridge', size: [1, 0.25, 1], transform: transform([8, 1, 6]), bridgeNodeIds: ['about-05', 'about-06'] },
   { id: 'work-tower', kind: 'tower', size: [1, 2.5, 1], transform: transform([-7, 0, 0], 1) },
-  { id: 'notes-tower', kind: 'tower', size: [1, 4.5, 1], transform: transform([1, 1, -9]) },
+  { id: 'notes-tower', kind: 'tower', size: [1, 4.5, 1], transform: transform([0, 1, -8], 0, -3 * Math.PI / 4) },
   { id: 'about-tower', kind: 'tower', size: [1, 3.5, 1], transform: transform([7, 1.5, 8]) },
   { id: 'experiments-tower', kind: 'tower', size: [1, 3.5, 1], transform: transform([8, 1, -1]) },
   { id: 'central-ruin', kind: 'ruin', size: [1, 1, 1], transform: transform([-2, 0.5, -1]) },
-  { id: 'notes-ruin', kind: 'ruin', size: [1, 1, 1], transform: transform([-1, 1, -9]) },
   { id: 'about-ruin', kind: 'ruin', size: [1, 1, 1], transform: transform([6, 1, 8]) },
 ];
 
@@ -75,7 +78,7 @@ defineBranch(
 );
 defineBranch(
   'notes',
-  [[0, 0, -1], [0, 0, -2], [0, 0.5, -3], [0, 0.5, -4], [0, 0.5, -5], [0, 0.5, -6], [0, 0.5, -7], [0, 0.5, -8]],
+  [[0, 0, -1], [0, 0, -2], [0, 0.5, -3], [0, 0.5, -4], [0, 0.5, -5], [0, 0.5, -6], [0, 0.5, -7], [1, 0.5, -7]],
   ['central-platform', 'central-platform', 'notes-stair', 'notes-bridge', 'notes-bridge', 'notes-bridge', 'notes-platform'],
   'field-notes',
 );

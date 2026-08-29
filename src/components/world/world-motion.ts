@@ -55,17 +55,6 @@ export function signalBarProgress(elapsedSeconds: number, active: boolean, reduc
   return easeOutQuint(elapsedSeconds / 0.32);
 }
 
-/** About ring expansion: reduced motion snaps to the finished radius with no fade residual. */
-export function aboutSignalPose(elapsedSeconds: number, active: boolean, reducedMotion: boolean): { scale: number; opacity: number } {
-  if (!active) return { scale: 0.01, opacity: 0 };
-  if (reducedMotion) return { scale: 2.9, opacity: 0 };
-  const progress = Math.min(1, elapsedSeconds / 0.8);
-  return {
-    scale: 0.4 + easeOutQuint(progress) * 2.5,
-    opacity: (1 - progress) * 0.45,
-  };
-}
-
 function clean(value: number): number {
   const rounded = Math.round(value * 1_000_000) / 1_000_000;
   return Object.is(rounded, -0) ? 0 : rounded;
@@ -105,6 +94,14 @@ export function towerWindowGlow(elapsedSeconds: number, night: boolean, active: 
   if (reducedMotion) return lit;
   const swing = night ? 0.06 : 0.22;
   return lit + Math.sin(elapsedSeconds * 2.8) * swing;
+}
+
+/** Spawn landing pad: soft cyan-white glow at night with a gentle idle pulse. */
+export function landingPadGlow(elapsedSeconds: number, night: boolean, reducedMotion: boolean): number {
+  if (!night) return 0;
+  const idle = 0.75;
+  if (reducedMotion) return idle;
+  return idle + Math.sin(elapsedSeconds * 2.0) * 0.08;
 }
 
 /** Coral sculptures: warm beacon glow at night with a gentle idle pulse. */
@@ -241,6 +238,55 @@ export function projectCourtPose(progress: number): ProjectCourtPose {
   };
 }
 
+export interface ProjectCourtAmbientPose {
+  rearSlabLift: number;
+  frontSlabLift: number;
+  gantryYOffset: number;
+  gantryYawOffset: number;
+  gantryScaleZOffset: number;
+}
+
+const PROJECT_COURT_AMBIENT_NEUTRAL: ProjectCourtAmbientPose = {
+  rearSlabLift: 0,
+  frontSlabLift: 0,
+  gantryYOffset: 0,
+  gantryYawOffset: 0,
+  gantryScaleZOffset: 0,
+};
+
+/** Idle-only gantry cradle hover at neutral and seated tension at held; reduced motion removes it entirely. */
+export function projectCourtAmbientPose(
+  elapsedSeconds: number,
+  held: boolean,
+  reducedMotion: boolean,
+): ProjectCourtAmbientPose {
+  if (reducedMotion || !Number.isFinite(elapsedSeconds)) return PROJECT_COURT_AMBIENT_NEUTRAL;
+  if (!held) {
+    const hover = Math.sin(elapsedSeconds * 1.4 + 0.3);
+    const wobble = Math.sin(elapsedSeconds * 0.95 + 1.1);
+    const breathe = Math.sin(elapsedSeconds * 0.8 + 0.6);
+    return {
+      rearSlabLift: 0,
+      frontSlabLift: 0,
+      gantryYOffset: hover * 0.05,
+      gantryYawOffset: wobble * 0.04,
+      gantryScaleZOffset: breathe * 0.03,
+    };
+  }
+  const tension = Math.sin(elapsedSeconds * 1.05 + 0.5);
+  const flex = Math.sin(elapsedSeconds * 1.45 + 1.4);
+  const sway = Math.sin(elapsedSeconds * 0.75 + 0.9);
+  const rearSettle = Math.sin(elapsedSeconds * 0.65 + 0.2);
+  const frontSettle = Math.sin(elapsedSeconds * 0.72 + 2.1);
+  return {
+    rearSlabLift: rearSettle * 0.018,
+    frontSlabLift: frontSettle * 0.018,
+    gantryYOffset: tension * 0.035,
+    gantryYawOffset: sway * 0.02,
+    gantryScaleZOffset: flex * 0.022,
+  };
+}
+
 export interface IndexEnginePiecePose {
   position: GridPoint;
   rotation: GridPoint;
@@ -335,11 +381,6 @@ const INDEX_ENGINE_CARRIAGE_CROWN: IndexEngineCarriagePose = {
   rotation: [0, 0, 0],
 };
 
-const INDEX_ENGINE_CARRIAGE_EXTERIOR: IndexEngineCarriagePose = {
-  position: [0.68, 4.15, -0.55],
-  rotation: [0, 0.28, 0],
-};
-
 const INDEX_ENGINE_CARRIAGE_BASE: IndexEngineCarriagePose = {
   position: [0.68, 0.55, -0.55],
   rotation: [0, 0.28, 0],
@@ -349,6 +390,14 @@ const INDEX_ENGINE_CARRIAGE_APPROACH: IndexEngineCarriagePose = {
   position: [0.68, 4.12, -0.55],
   rotation: [0, 0.28, 0],
 };
+
+const INDEX_ENGINE_CARRIAGE_WAYPOINTS: readonly IndexEngineCarriagePose[] = [
+  INDEX_ENGINE_CARRIAGE_BASE,
+  { position: [0.68, 1.28, -0.55], rotation: [0, 0.28, 0] },
+  { position: [0.68, 2.15, -0.55], rotation: [0, 0.28, 0] },
+  { position: [0.68, 3.05, -0.55], rotation: [0, 0.28, 0] },
+  INDEX_ENGINE_CARRIAGE_APPROACH,
+];
 
 function carriagePoseBetween(
   from: IndexEngineCarriagePose,
@@ -361,37 +410,58 @@ function carriagePoseBetween(
   };
 }
 
-/** Field Notes Index Engine: coral cap drops, climbs the guide path, then re-docks at the crown. */
+function carriagePoseAlongWaypoints(progress: number): IndexEngineCarriagePose {
+  const scaled = progress * (INDEX_ENGINE_CARRIAGE_WAYPOINTS.length - 1);
+  const segment = Math.min(INDEX_ENGINE_CARRIAGE_WAYPOINTS.length - 2, Math.floor(scaled));
+  return carriagePoseBetween(
+    INDEX_ENGINE_CARRIAGE_WAYPOINTS[segment]!,
+    INDEX_ENGINE_CARRIAGE_WAYPOINTS[segment + 1]!,
+    scaled - segment,
+  );
+}
+
+/** Field Notes Index Engine: coral cap starts on the guide base and climbs to the crown on arrival. */
 export function indexEngineCarriagePose(progress: number): IndexEngineCarriagePose {
   const clamped = clampUnit(progress);
-  if (clamped === 0 || clamped === 1) return INDEX_ENGINE_CARRIAGE_CROWN;
-  if (clamped <= 0.06) return carriagePoseBetween(
-    INDEX_ENGINE_CARRIAGE_CROWN,
-    INDEX_ENGINE_CARRIAGE_EXTERIOR,
-    clamped / 0.06,
-  );
-  if (clamped <= 0.16) return carriagePoseBetween(
-    INDEX_ENGINE_CARRIAGE_EXTERIOR,
-    INDEX_ENGINE_CARRIAGE_BASE,
-    (clamped - 0.06) / 0.1,
-  );
-  if (clamped >= 0.94) return carriagePoseBetween(
-    INDEX_ENGINE_CARRIAGE_APPROACH,
-    INDEX_ENGINE_CARRIAGE_CROWN,
-    (clamped - 0.94) / 0.06,
-  );
+  if (clamped === 0) return INDEX_ENGINE_CARRIAGE_BASE;
+  if (clamped === 1) return INDEX_ENGINE_CARRIAGE_CROWN;
+  if (clamped >= 0.94) {
+    return carriagePoseBetween(
+      INDEX_ENGINE_CARRIAGE_APPROACH,
+      INDEX_ENGINE_CARRIAGE_CROWN,
+      (clamped - 0.94) / 0.06,
+    );
+  }
+  return carriagePoseAlongWaypoints(clamped / 0.94);
+}
 
-  const climb = clampUnit((clamped - 0.16) / 0.74);
-  const waypoints: readonly IndexEngineCarriagePose[] = [
-    INDEX_ENGINE_CARRIAGE_BASE,
-    { position: [0.68, 1.28, -0.55], rotation: [0, 0.28, 0] },
-    { position: [0.68, 2.15, -0.55], rotation: [0, 0.28, 0] },
-    { position: [0.68, 3.05, -0.55], rotation: [0, 0.28, 0] },
-    INDEX_ENGINE_CARRIAGE_APPROACH,
-  ];
-  const scaled = climb * (waypoints.length - 1);
-  const segment = Math.min(waypoints.length - 2, Math.floor(scaled));
-  return carriagePoseBetween(waypoints[segment]!, waypoints[segment + 1]!, scaled - segment);
+const INDEX_ENGINE_AMBIENT_NEUTRAL: IndexEnginePiecePose = {
+  position: [0, 0, 0],
+  rotation: [0, 0, 0],
+};
+
+/** Idle-only chamber flutter for neutral and held poses; reduced motion removes it entirely. */
+export function indexEngineChamberAmbientPose(
+  elapsedSeconds: number,
+  chamberIndex: number,
+  reducedMotion: boolean,
+): IndexEnginePiecePose {
+  if (reducedMotion || !Number.isFinite(elapsedSeconds)) return INDEX_ENGINE_AMBIENT_NEUTRAL;
+  const phase = chamberIndex * 1.7 + 0.4;
+  const flutter = Math.sin(elapsedSeconds * 1.2 + phase);
+  const drift = Math.sin(elapsedSeconds * 0.45 + phase * 2);
+  return {
+    position: [
+      drift * 0.015,
+      flutter * 0.02,
+      Math.cos(elapsedSeconds * 0.55 + phase) * 0.012,
+    ],
+    rotation: [
+      flutter * 0.025,
+      drift * 0.03,
+      Math.sin(elapsedSeconds * 0.38 + phase) * 0.02,
+    ],
+  };
 }
 
 /** Idle-only carriage float; held ceremony poses stay fixed and reduced motion removes it entirely. */
@@ -491,6 +561,13 @@ export function orreryBeamPose(progress: number, inwardYaw: number): { yaw: numb
   };
 }
 
+/** About Orrery Beacon: slow passive beam sweep while the zone is held open. */
+export function orreryBeamSweep(elapsedSeconds: number, active: boolean, reducedMotion: boolean): number {
+  if (!active) return 0;
+  if (reducedMotion) return 0;
+  return Math.sin(elapsedSeconds * 0.72) * 0.48;
+}
+
 const ARCHIVE_SLAB_TWIST = Math.PI / 30;
 
 /** Notes archive: base twist per slab plus a visit riffle. */
@@ -543,13 +620,6 @@ export function lanternRingSpin(elapsedSeconds: number, active: boolean, reduced
   }
   const speed = active ? idle + Math.exp(-elapsedSeconds * 1.4) * 1.35 : idle;
   return { inner: elapsedSeconds * speed, outer: elapsedSeconds * -speed * 0.72 };
-}
-
-/** About lighthouse beam sweeps when the zone is active. */
-export function lighthouseBeamSweep(elapsedSeconds: number, active: boolean, reducedMotion: boolean): number {
-  if (!active) return 0;
-  if (reducedMotion) return Math.PI / 5;
-  return Math.sin(elapsedSeconds * 2.6) * 0.55;
 }
 
 export function rotatePointY(point: GridPoint, angle: number): GridPoint {

@@ -25,7 +25,7 @@ import { TowerModule } from './tower-modules';
 afterEach(cleanup);
 
 describe('Index Engine tower renderer', () => {
-  it('renders exactly two static tone meshes, one instanced keyed mesh, one carriage mesh, and one window mesh', () => {
+  it('renders exactly two static tone meshes, two instanced keyed meshes, one carriage mesh, and one window mesh', () => {
     const module = WORLD_MAP.modules.find((candidate) => candidate.id === 'notes-tower')!;
     const design = towerDesign('index-engine', module.size[1]);
     const { container } = render(
@@ -42,12 +42,13 @@ describe('Index Engine tower renderer', () => {
     const meshes = container.querySelectorAll('mesh');
     const staticTones = new Set(design.staticParts.map((part) => part.tone));
 
-    expect(instancedMeshes).toHaveLength(1);
+    expect(instancedMeshes).toHaveLength(2);
     expect(meshes).toHaveLength(4);
     expect(staticTones).toEqual(new Set(['structure', 'surface']));
-    expect(container.querySelector('[name="index-engine-pieces"]')).toBeInTheDocument();
+    expect(container.querySelector('[name="index-engine-chambers"]')).toBeInTheDocument();
+    expect(container.querySelector('[name="index-engine-crown"]')).toBeInTheDocument();
     expect(container.querySelector('[name="index-engine-carriage"]')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-testid="lambert-material"]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-testid="lambert-material"]')).toHaveLength(5);
   });
 
   it('maps six authored keyed assemblies to neutral pose transforms', () => {
@@ -76,10 +77,14 @@ describe('Index Engine tower renderer', () => {
       'crown-half-1',
     ]));
     expect(new Set(transforms.map(({ assembly }) => assembly.scale?.join(',')))).toHaveLength(5);
-    transforms.forEach(({ assembly, pose }, index) => {
+    transforms.forEach(({ assembly, pose, key }, index) => {
       expect(assembly.position, `assembly ${index} position`).toEqual(pose.position);
       expect(assembly.scale, `assembly ${index} scale`).toBeDefined();
-      expect(assembly.parts).toEqual(design.assemblies['chamber-0']!.parts);
+      if (key.startsWith('chamber-')) {
+        expect(assembly.parts).toEqual(design.assemblies['chamber-0']!.parts);
+      } else {
+        expect(assembly.parts).toEqual(design.assemblies['crown-half-0']!.parts);
+      }
     });
   });
 });

@@ -27,12 +27,21 @@ import {
   AnimatedLambert,
   DAY,
   DECOR_GROUND_SNAP,
+  LANDING_PAD,
+  LANDING_PAD_TILE,
   NIGHT,
+  TOWER_WINDOW_DAY_COLOR,
+  TOWER_WINDOW_NIGHT_COLOR,
   updateGoldRingLambert,
+  updateLandingPadLambert,
   useNightMix,
   type PaletteKey,
   type WorldTheme,
 } from './world-materials';
+import {
+  buildLandingPadPatternGeometry,
+  buildLandingPadStructureGeometry,
+} from './landing-pad-pattern';
 import { WORLD_MAP, ZONE_NODES } from './world-map';
 import {
   applyVegetationTheme,
@@ -40,7 +49,6 @@ import {
   deformVegetationGeometry,
 } from './world-vegetation';
 import {
-  aboutSignalPose,
   cameraReframeProgress,
   carouselBulbGlow,
   carouselSpinSpeed,
@@ -49,6 +57,7 @@ import {
   nearestEquivalentAngle,
   rotatePointY,
   themeTransitionProgress,
+  towerWindowGlow,
 } from './world-motion';
 import type { ExperiencePhase, WorldModule, ZoneId } from './world-types';
 
@@ -297,7 +306,7 @@ function NightAmbience({
     <>
       <pointLight position={[-8, 3.4, -1]} intensity={theme === 'night' ? 1.55 : 0} color="#ffb38a" distance={10} />
       <pointLight position={[1, 4.6, -9]} intensity={theme === 'night' ? 1.4 : 0} color="#d7ecff" distance={9} />
-      <pointLight position={[8, 3.8, 9]} intensity={theme === 'night' ? 1.45 : 0} color="#ffc7a1" distance={10} />
+      <pointLight position={[7, 3.8, 8]} intensity={theme === 'night' ? 1.45 : 0} color="#ffc7a1" distance={10} />
     </>
   );
 }
@@ -504,13 +513,6 @@ const ISLAND_RUIN_DESIGNS: Record<string, readonly RuinPart[]> = {
     { position: [0.06, 0.58, -0.04], size: [0.52, 0.62, 0.52], tone: 'structure' },
     { position: [0.22, 0.38, 0.38], size: [0.48, 0.14, 0.68], rotation: [0.22, 0.45, 0.28], tone: 'dirt' },
     { position: [-0.28, 0.1, 0.3], size: [0.24, 0.16, 0.24], tone: 'dirt' },
-  ],
-  'notes-ruin': [
-    { position: [-0.34, 0.34, 0], size: [0.14, 0.68, 0.14], tone: 'shadow' },
-    { position: [0, 0.08, 0], size: [0.78, 0.14, 0.58], tone: 'structure' },
-    { position: [0.06, 0.24, -0.05], size: [0.7, 0.12, 0.52], rotation: [0.1, -0.2, 0.18], tone: 'surface' },
-    { position: [-0.08, 0.42, 0.06], size: [0.58, 0.1, 0.44], rotation: [-0.08, 0.35, 0.24], tone: 'structure' },
-    { position: [0.28, 0.14, 0.22], size: [0.22, 0.12, 0.22], tone: 'dirt' },
   ],
   'about-ruin': [
     { position: [0, 0.22, 0], size: [0.32, 0.44, 0.32], tone: 'structure' },
@@ -888,26 +890,6 @@ function HobbiesCarousel({ active, sequence, theme, reducedMotion, onSelect }: {
   );
 }
 
-function AboutSignal({ active, sequence, theme, reducedMotion }: {
-  active: boolean; sequence: number; theme: Props['theme']; reducedMotion: boolean;
-}) {
-  const ring = useRef<Mesh>(null);
-  const elapsed = useRef(1);
-  const { invalidate } = useThree();
-  useEffect(() => { if (active) { elapsed.current = 0; invalidate(); } }, [active, invalidate, sequence]);
-  useFrame((_state, delta) => {
-    if (!ring.current) return;
-    if (!reducedMotion) elapsed.current += delta;
-    const { scale, opacity } = aboutSignalPose(elapsed.current, active, reducedMotion);
-    ring.current.scale.setScalar(scale);
-    (ring.current.material as MeshBasicMaterial).opacity = opacity;
-    if (active && !reducedMotion && elapsed.current < 0.8) invalidate();
-  });
-  return <mesh ref={ring} position={[8, 4.6, 9]} rotation={[-Math.PI / 2, 0, 0]}>
-    <ringGeometry args={[0.38, 0.43, 16]} /><meshBasicMaterial color={(theme === 'night' ? NIGHT : DAY).coral} transparent opacity={0} depthWrite={false} />
-  </mesh>;
-}
-
 type RuinPiece = {
   position: [number, number, number];
   rotation?: [number, number, number];
@@ -940,6 +922,76 @@ function RuinAccents({ theme }: { theme: Props['theme'] }) {
         <RuinInstances key={tone} pieces={pieces} tone={tone} theme={theme} />
       ))}
     </>
+  );
+}
+
+function SpawnLandingPad({ theme, reducedMotion }: { theme: WorldTheme; reducedMotion: boolean }) {
+  const structureMaterial = useRef<MeshLambertMaterial>(null);
+  const frameMesh = useRef<Mesh>(null);
+  const padFrom = useRef(new Color(LANDING_PAD.day));
+  const themeElapsed = useRef(0.9);
+  const advanceNightMix = useNightMix(theme, reducedMotion);
+  const structureGeometry = useMemo(() => buildLandingPadStructureGeometry(), []);
+  const patternGeometry = useMemo(
+    () => buildLandingPadPatternGeometry(),
+    [],
+  );
+  const { invalidate } = useThree();
+
+  useEffect(() => () => {
+    structureGeometry.dispose();
+    patternGeometry.dispose();
+  }, [patternGeometry, structureGeometry]);
+
+  useEffect(() => {
+    themeElapsed.current = 0;
+    if (structureMaterial.current) padFrom.current.copy(structureMaterial.current.color);
+    invalidate();
+  }, [invalidate, theme]);
+
+  useFrame((state, delta) => {
+    const nightMix = advanceNightMix(delta);
+    if (!reducedMotion) themeElapsed.current += delta;
+    else themeElapsed.current = 0.9;
+    const themeProgress = themeTransitionProgress(themeElapsed.current);
+    if (structureMaterial.current) {
+      updateLandingPadLambert(structureMaterial.current, {
+        fromColor: padFrom.current,
+        theme,
+        transitionProgress: themeProgress,
+      });
+    }
+    if (frameMesh.current) {
+      const material = frameMesh.current.material as MeshBasicMaterial;
+      material.color.lerpColors(TOWER_WINDOW_DAY_COLOR, TOWER_WINDOW_NIGHT_COLOR, nightMix);
+      material.opacity = MathUtils.lerp(
+        towerWindowGlow(state.clock.elapsedTime, false, false, reducedMotion),
+        towerWindowGlow(state.clock.elapsedTime, true, false, reducedMotion),
+        nightMix,
+      );
+    }
+    if (themeElapsed.current < 0.9 || theme === 'night') invalidate();
+  });
+
+  return (
+    <group>
+      <mesh geometry={structureGeometry} castShadow receiveShadow>
+        <meshLambertMaterial
+          ref={structureMaterial}
+          color={LANDING_PAD.day}
+          flatShading
+        />
+      </mesh>
+      <mesh ref={frameMesh} geometry={patternGeometry} renderOrder={1}>
+        <meshBasicMaterial
+          color={LANDING_PAD_TILE.day}
+          transparent
+          opacity={towerWindowGlow(0, theme === 'night', false, true)}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
   );
 }
 
@@ -1045,9 +1097,9 @@ export function WorldScene(props: Props) {
           reducedMotion={props.reducedMotion}
           onSelect={() => props.onZoneRequest('hobbies')}
         />
-        <AboutSignal active={activeZone === 'about'} sequence={props.reactionSequence} theme={props.theme} reducedMotion={props.reducedMotion} />
         <Vegetation theme={props.theme} reducedMotion={props.reducedMotion} />
         <RuinAccents theme={props.theme} />
+        <SpawnLandingPad theme={props.theme} reducedMotion={props.reducedMotion} />
         <Traveler nodeId={props.characterNodeId} path={props.path} phase={props.phase} theme={props.theme} reducedMotion={props.reducedMotion} />
         <mesh position={[0, WORLD_SHADOW_PLANE_Y, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[WORLD_WATER_SIZE, WORLD_WATER_SIZE]} />

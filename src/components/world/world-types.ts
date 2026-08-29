@@ -21,6 +21,12 @@ export type WindowContent =
 export interface GridTransform {
   position: GridPoint;
   quarterTurns: QuarterTurn;
+  /** Extra yaw after quarter-turn snapping; negative values rotate clockwise. */
+  yawRadians?: number;
+}
+
+export function moduleYaw(transform: GridTransform): number {
+  return transform.quarterTurns * (Math.PI / 2) + (transform.yawRadians ?? 0);
 }
 
 export interface WorldModule {

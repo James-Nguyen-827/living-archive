@@ -85,6 +85,50 @@ describe('WORLD_MAP stable sculpture', () => {
     expect(platformEdge.south - footprint.south).toBeGreaterThanOrEqual(minMargin);
   });
 
+  it('keeps the Index Engine centered on the notes platform', () => {
+    const platform = WORLD_MAP.modules.find((module) => module.id === 'notes-platform');
+    const tower = WORLD_MAP.modules.find((module) => module.id === 'notes-tower');
+    expect(platform).toBeDefined();
+    expect(tower).toBeDefined();
+
+    expect(tower!.transform.position).toEqual([0, 1, -8]);
+    expect(tower!.transform.yawRadians).toBeCloseTo(-3 * Math.PI / 4);
+    expect(tower!.transform.position[0]).toBe(platform!.transform.position[0]);
+    expect(tower!.transform.position[2]).toBe(platform!.transform.position[2]);
+
+    const envelope = towerDesignEnvelope(towerDesign('index-engine', tower!.size[1]));
+    const platformEdge = platformBounds(platform!);
+    const yaw = tower!.transform.yawRadians ?? 0;
+    const halfWidth = (
+      envelope.width * Math.abs(Math.cos(yaw)) + envelope.depth * Math.abs(Math.sin(yaw))
+    ) / 2;
+    const halfDepth = (
+      envelope.width * Math.abs(Math.sin(yaw)) + envelope.depth * Math.abs(Math.cos(yaw))
+    ) / 2;
+    const footprint = {
+      west: tower!.transform.position[0] - halfWidth,
+      east: tower!.transform.position[0] + halfWidth,
+      north: tower!.transform.position[2] - halfDepth,
+      south: tower!.transform.position[2] + halfDepth,
+    };
+    const minMargin = 0.2;
+
+    expect(footprint.west - platformEdge.west).toBeGreaterThanOrEqual(minMargin);
+    expect(footprint.north - platformEdge.north).toBeGreaterThanOrEqual(minMargin);
+    expect(platformEdge.east - footprint.east).toBeGreaterThanOrEqual(minMargin);
+    expect(platformEdge.south - footprint.south).toBeGreaterThanOrEqual(minMargin);
+  });
+
+  it('parks the Field Notes traveler on the south-east corner of the notes platform', () => {
+    const notesZone = WORLD_MAP.nodes.find((node) => node.id === 'notes-zone');
+    const platform = WORLD_MAP.modules.find((module) => module.id === 'notes-platform');
+
+    expect(notesZone?.position).toEqual([1, 0.5, -7]);
+    expect(platform).toBeDefined();
+    expect(notesZone!.position[0]).toBe(platform!.transform.position[0] + platform!.size[0] / 2 - 0.5);
+    expect(notesZone!.position[2]).toBe(platform!.transform.position[2] + platform!.size[2] / 2 - 0.5);
+  });
+
   it('binds the Index Engine to its longer arrival contract without changing the public tower id', () => {
     const reaction = WORLD_REACTIONS.find((candidate) => candidate.zone === 'field-notes');
 
