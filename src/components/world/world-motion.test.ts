@@ -14,13 +14,16 @@ import {
   CAROUSEL_IDLE_SPIN_SPEED,
   coralBeaconGlow,
   advanceTowerReaction,
+  INDEX_ENGINE_REACTION_DURATIONS,
+  indexEngineAmbientCarriageOffset,
+  indexEngineCarriagePose,
+  indexEngineChamberPose,
+  indexEngineCrownHalfPose,
   gateBlockPose,
   lanternRingSpin,
   orreryBeamPose,
   orreryBeaconGlow,
   orreryRingPose,
-  pagewellBookmarkTilt,
-  pagewellFolioYaw,
   pageRiffleYaw,
   paradoxCubePose,
   paradoxFrameIdleSpin,
@@ -337,12 +340,77 @@ describe('narrative tower reactions', () => {
     expect(frontEndpoint[1]).toBeCloseTo(2.24, 2);
   });
 
-  it('fans the Pagewell folios in a rising wave and tips its bookmark', () => {
-    expect(pagewellFolioYaw(0, 4)).toBeCloseTo(0.16);
-    expect(pagewellFolioYaw(0.45, 0)).toBeGreaterThan(pagewellFolioYaw(0, 0));
-    expect(pagewellFolioYaw(0.45, 0)).toBeGreaterThan(pagewellFolioYaw(0.45, 4));
-    expect(pagewellFolioYaw(1, 4)).toBeCloseTo(4 * Math.PI / 5);
-    expect(pagewellBookmarkTilt(1)).toBeCloseTo(0.35);
+  it('unlocks the Index Engine chambers bottom-to-top and then splits its crown', () => {
+    expect(INDEX_ENGINE_REACTION_DURATIONS).toEqual({ arrival: 1.4, exit: 0.8 });
+
+    const neutral = Array.from({ length: 4 }, (_unused, index) => indexEngineChamberPose(0, index));
+    expect(indexEngineChamberPose(0.15, 0)).toEqual(neutral[0]);
+    expect(indexEngineChamberPose(0.46, 0)).not.toEqual(neutral[0]);
+    expect(indexEngineChamberPose(0.46, 3)).toEqual(neutral[3]);
+    expect(indexEngineChamberPose(0.76, 2)).not.toEqual(neutral[2]);
+
+    const crownNeutral = indexEngineCrownHalfPose(0.77, 0);
+    const crownOpening = indexEngineCrownHalfPose(0.9, 0);
+    expect(crownOpening.position).not.toEqual(crownNeutral.position);
+    expect(indexEngineCrownHalfPose(0.9, 0).position[0]).toBeGreaterThan(0);
+    expect(indexEngineCrownHalfPose(0.9, 1).position[0]).toBeLessThan(0);
+  });
+
+  it('drops the coral cap, climbs through the chambers, and redocks it at the crown', () => {
+    const neutral = indexEngineCarriagePose(0);
+    const atBase = indexEngineCarriagePose(0.16);
+    const climbing = indexEngineCarriagePose(0.6);
+    const approach = indexEngineCarriagePose(0.94);
+    const docking = indexEngineCarriagePose(0.97);
+    const redocked = indexEngineCarriagePose(1);
+
+    expect(neutral.position).toEqual([0, 4.38, 0]);
+    expect(atBase.position[1]).toBeCloseTo(0.55);
+    expect(climbing.position[1]).toBeGreaterThan(atBase.position[1]);
+    expect(climbing.position[1]).toBeLessThan(neutral.position[1]);
+    expect(approach).not.toEqual(neutral);
+    expect(approach.position[1]).toBeLessThan(neutral.position[1]);
+    expect(docking.position[1]).toBeGreaterThan(approach.position[1]);
+    expect(docking.position[1]).toBeLessThan(neutral.position[1]);
+    expect(redocked).toEqual(neutral);
+  });
+
+  it('keeps the complete initial Index Engine drop beat vertically monotonic', () => {
+    const samples = Array.from(
+      { length: 65 },
+      (_unused, index) => indexEngineCarriagePose(index * 0.16 / 64).position[1],
+    );
+
+    expect(samples.at(-1)).toBeLessThan(samples[0]!);
+    samples.slice(1).forEach((y, index) => {
+      expect(y, `sample ${index + 1}`).toBeLessThanOrEqual(samples[index]!);
+    });
+  });
+
+  it('keeps Index Engine poses finite, clamped, and still once held', () => {
+    const poses = [
+      indexEngineChamberPose(-1, 0),
+      indexEngineChamberPose(2, 3),
+      indexEngineCrownHalfPose(-1, 0),
+      indexEngineCrownHalfPose(2, 1),
+      indexEngineCarriagePose(-1),
+      indexEngineCarriagePose(2),
+    ];
+
+    expect(indexEngineChamberPose(-1, 0)).toEqual(indexEngineChamberPose(0, 0));
+    expect(indexEngineChamberPose(2, 3)).toEqual(indexEngineChamberPose(1, 3));
+    expect(indexEngineCrownHalfPose(-1, 0)).toEqual(indexEngineCrownHalfPose(0, 0));
+    expect(indexEngineCrownHalfPose(2, 1)).toEqual(indexEngineCrownHalfPose(1, 1));
+    expect(indexEngineCarriagePose(-1)).toEqual(indexEngineCarriagePose(0));
+    expect(indexEngineCarriagePose(2)).toEqual(indexEngineCarriagePose(1));
+    expect(poses.flatMap((pose) => [...pose.position, ...pose.rotation]).every(Number.isFinite)).toBe(true);
+  });
+
+  it('keeps the neutral carriage ambient offset subtle and removes it for reduced motion', () => {
+    expect(indexEngineAmbientCarriageOffset(2, true)).toBe(0);
+    for (const elapsed of [0, 0.25, 0.5, 1.2, 2.4]) {
+      expect(Math.abs(indexEngineAmbientCarriageOffset(elapsed, false))).toBeLessThanOrEqual(0.03);
+    }
   });
 
   it('counter-spins the Paradox Gate frames while idle', () => {

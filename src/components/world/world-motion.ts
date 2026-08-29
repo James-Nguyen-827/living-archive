@@ -128,6 +128,7 @@ export function orreryBeaconGlow(elapsedSeconds: number, night: boolean, active:
 export const TOWER_ARRIVAL_DURATION = 1.05;
 export const TOWER_EXIT_DURATION = 0.65;
 export const PROJECT_COURT_REACTION_DURATIONS = { arrival: 1.4, exit: 0.8 } as const;
+export const INDEX_ENGINE_REACTION_DURATIONS = { arrival: 1.4, exit: 0.8 } as const;
 
 export interface TowerReactionDurations {
   arrival: number;
@@ -240,17 +241,163 @@ export function projectCourtPose(progress: number): ProjectCourtPose {
   };
 }
 
-/** Field Notes Pagewell: five folios open bottom-to-top around the hollow spine. */
-export function pagewellFolioYaw(progress: number, folioIndex: number): number {
-  const neutral = folioIndex * 0.04;
-  const target = folioIndex === 0 ? 0.24 : folioIndex * Math.PI / 5;
-  const delay = folioIndex * 0.12;
-  const local = Math.min(1, Math.max(0, (progress - delay) / 0.52));
-  return neutral + (target - neutral) * easeOutQuint(local);
+export interface IndexEnginePiecePose {
+  position: GridPoint;
+  rotation: GridPoint;
 }
 
-export function pagewellBookmarkTilt(progress: number): number {
-  return easeOutQuint(progress) * 0.35;
+export interface IndexEngineCarriagePose extends IndexEnginePiecePose {}
+
+const INDEX_ENGINE_CHAMBER_NEUTRAL: readonly IndexEnginePiecePose[] = [
+  { position: [0.38, 0.85, 0.15], rotation: [0, 0, 0] },
+  { position: [-0.3, 1.63, -0.16], rotation: [0, Math.PI / 2, 0] },
+  { position: [0.28, 2.4, -0.15], rotation: [0, Math.PI, 0] },
+  { position: [-0.35, 3.16, 0.14], rotation: [0, Math.PI * 1.5, 0] },
+];
+
+const INDEX_ENGINE_CHAMBER_HELD: readonly IndexEnginePiecePose[] = [
+  { position: [0.52, 1.06, 0.37], rotation: [0.18, 0.32, 0.12] },
+  { position: [-0.53, 1.83, -0.4], rotation: [-0.14, Math.PI / 2 - 0.28, -0.16] },
+  { position: [0.5, 2.62, 0.38], rotation: [0.16, Math.PI + 0.3, 0.14] },
+  { position: [-0.52, 3.42, -0.4], rotation: [-0.18, Math.PI * 1.5 - 0.32, -0.12] },
+];
+
+const INDEX_ENGINE_CROWN_NEUTRAL: readonly IndexEnginePiecePose[] = [
+  { position: [0.2, 4, 0.1], rotation: [0, 0, 0] },
+  { position: [-0.2, 4, -0.1], rotation: [0, Math.PI, 0] },
+];
+
+const INDEX_ENGINE_CROWN_HELD: readonly IndexEnginePiecePose[] = [
+  { position: [0.52, 4.14, 0.38], rotation: [0.12, 0.28, 0.2] },
+  { position: [-0.52, 4.14, -0.38], rotation: [-0.12, Math.PI - 0.28, -0.2] },
+];
+
+const INDEX_ENGINE_CHAMBER_STAGES = [
+  [0.16, 0.5],
+  [0.3, 0.64],
+  [0.44, 0.78],
+  [0.58, 0.9],
+] as const;
+
+function clampUnit(value: number): number {
+  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
+}
+
+function lerpPoint(from: GridPoint, to: GridPoint, progress: number): GridPoint {
+  return [
+    lerp(from[0], to[0], progress),
+    lerp(from[1], to[1], progress),
+    lerp(from[2], to[2], progress),
+  ];
+}
+
+function indexEnginePoseBetween(
+  progress: number,
+  start: number,
+  end: number,
+  neutral: IndexEnginePiecePose,
+  held: IndexEnginePiecePose,
+): IndexEnginePiecePose {
+  const local = easeOutQuint((clampUnit(progress) - start) / (end - start));
+  return {
+    position: lerpPoint(neutral.position, held.position, local),
+    rotation: lerpPoint(neutral.rotation, held.rotation, local),
+  };
+}
+
+/** Field Notes Index Engine: four chamber C-pieces unlock bottom-to-top into cantilevers. */
+export function indexEngineChamberPose(progress: number, chamberIndex: number): IndexEnginePiecePose {
+  const index = Math.min(INDEX_ENGINE_CHAMBER_NEUTRAL.length - 1, Math.max(0, Math.trunc(chamberIndex)));
+  const [start, end] = INDEX_ENGINE_CHAMBER_STAGES[index]!;
+  return indexEnginePoseBetween(
+    progress,
+    start,
+    end,
+    INDEX_ENGINE_CHAMBER_NEUTRAL[index]!,
+    INDEX_ENGINE_CHAMBER_HELD[index]!,
+  );
+}
+
+/** Field Notes Index Engine: crown C-pieces split late, holding the final negative space open. */
+export function indexEngineCrownHalfPose(progress: number, crownIndex: number): IndexEnginePiecePose {
+  const index = Math.min(INDEX_ENGINE_CROWN_NEUTRAL.length - 1, Math.max(0, Math.trunc(crownIndex)));
+  return indexEnginePoseBetween(
+    progress,
+    0.78,
+    0.96,
+    INDEX_ENGINE_CROWN_NEUTRAL[index]!,
+    INDEX_ENGINE_CROWN_HELD[index]!,
+  );
+}
+
+const INDEX_ENGINE_CARRIAGE_CROWN: IndexEngineCarriagePose = {
+  position: [0, 4.38, 0],
+  rotation: [0, 0, 0],
+};
+
+const INDEX_ENGINE_CARRIAGE_EXTERIOR: IndexEngineCarriagePose = {
+  position: [0.68, 4.15, -0.55],
+  rotation: [0, 0.28, 0],
+};
+
+const INDEX_ENGINE_CARRIAGE_BASE: IndexEngineCarriagePose = {
+  position: [0.68, 0.55, -0.55],
+  rotation: [0, 0.28, 0],
+};
+
+const INDEX_ENGINE_CARRIAGE_APPROACH: IndexEngineCarriagePose = {
+  position: [0.68, 4.12, -0.55],
+  rotation: [0, 0.28, 0],
+};
+
+function carriagePoseBetween(
+  from: IndexEngineCarriagePose,
+  to: IndexEngineCarriagePose,
+  progress: number,
+): IndexEngineCarriagePose {
+  return {
+    position: lerpPoint(from.position, to.position, easeInOutCubic(progress)),
+    rotation: lerpPoint(from.rotation, to.rotation, easeInOutCubic(progress)),
+  };
+}
+
+/** Field Notes Index Engine: coral cap drops, climbs the guide path, then re-docks at the crown. */
+export function indexEngineCarriagePose(progress: number): IndexEngineCarriagePose {
+  const clamped = clampUnit(progress);
+  if (clamped === 0 || clamped === 1) return INDEX_ENGINE_CARRIAGE_CROWN;
+  if (clamped <= 0.06) return carriagePoseBetween(
+    INDEX_ENGINE_CARRIAGE_CROWN,
+    INDEX_ENGINE_CARRIAGE_EXTERIOR,
+    clamped / 0.06,
+  );
+  if (clamped <= 0.16) return carriagePoseBetween(
+    INDEX_ENGINE_CARRIAGE_EXTERIOR,
+    INDEX_ENGINE_CARRIAGE_BASE,
+    (clamped - 0.06) / 0.1,
+  );
+  if (clamped >= 0.94) return carriagePoseBetween(
+    INDEX_ENGINE_CARRIAGE_APPROACH,
+    INDEX_ENGINE_CARRIAGE_CROWN,
+    (clamped - 0.94) / 0.06,
+  );
+
+  const climb = clampUnit((clamped - 0.16) / 0.74);
+  const waypoints: readonly IndexEngineCarriagePose[] = [
+    INDEX_ENGINE_CARRIAGE_BASE,
+    { position: [0.68, 1.28, -0.55], rotation: [0, 0.28, 0] },
+    { position: [0.68, 2.15, -0.55], rotation: [0, 0.28, 0] },
+    { position: [0.68, 3.05, -0.55], rotation: [0, 0.28, 0] },
+    INDEX_ENGINE_CARRIAGE_APPROACH,
+  ];
+  const scaled = climb * (waypoints.length - 1);
+  const segment = Math.min(waypoints.length - 2, Math.floor(scaled));
+  return carriagePoseBetween(waypoints[segment]!, waypoints[segment + 1]!, scaled - segment);
+}
+
+/** Idle-only carriage float; held ceremony poses stay fixed and reduced motion removes it entirely. */
+export function indexEngineAmbientCarriageOffset(elapsedSeconds: number, reducedMotion: boolean): number {
+  if (reducedMotion || !Number.isFinite(elapsedSeconds)) return 0;
+  return Math.sin(elapsedSeconds * 1.6) * 0.03;
 }
 
 export interface ParadoxFramePose {
@@ -355,12 +502,6 @@ export function pageRiffleYaw(elapsedSeconds: number, slabIndex: number, active:
   const local = Math.max(0, elapsedSeconds - delay);
   const wave = easeOutQuint(Math.min(1, local / 0.42));
   return base + wave * 0.24 * Math.sin(local * 4.2);
-}
-
-/** Notes archive: top slabs breathe when idle. */
-export function pageBreathYaw(elapsedSeconds: number, slabIndex: number, slabCount: number, reducedMotion: boolean): number {
-  if (reducedMotion || slabIndex < slabCount - 2) return 0;
-  return Math.sin(elapsedSeconds * 1.35 + slabIndex * 0.6) * 0.028;
 }
 
 export function pageBookmarkTip(elapsedSeconds: number, active: boolean, reducedMotion: boolean): number {

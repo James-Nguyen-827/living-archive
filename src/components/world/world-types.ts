@@ -49,7 +49,7 @@ export interface WorldMap {
 
 export type ReactionKind =
   | 'bridge-sweep'
-  | 'page-riffle'
+  | 'index-sequence'
   | 'gate-slot'
   | 'carousel-spin'
   | 'lantern-rings';

@@ -10,7 +10,7 @@ import {
 
 const CASES: readonly [string, TowerArchetype, number][] = [
   ['work-tower', 'project-court', 2.5],
-  ['notes-tower', 'pagewell', 4.5],
+  ['notes-tower', 'index-engine', 4.5],
   ['experiments-tower', 'paradox-gate', 3.5],
   ['about-tower', 'orrery', 3.5],
 ];
@@ -74,6 +74,45 @@ describe('narrative tower designs', () => {
 
     expect(budget.drawCalls).toBe(8);
     expect(budget.triangles).toBe(324);
+  });
+
+  it('builds the Field Notes Index Engine from six instanced C-shaped pieces and one coral carriage', () => {
+    const design = towerDesign('index-engine', 4.5);
+    const keyedPieces = [
+      'chamber-0',
+      'chamber-1',
+      'chamber-2',
+      'chamber-3',
+      'crown-half-0',
+      'crown-half-1',
+    ];
+
+    expect(Object.keys(design.assemblies)).toEqual([
+      ...keyedPieces,
+      'coral-carriage',
+    ]);
+    expect(new Set(keyedPieces.map((key) => design.assemblies[key]?.instanceGroup))).toEqual(
+      new Set(['index-engine-pieces']),
+    );
+    expect(keyedPieces.map((key) => design.assemblies[key]?.parts)).toEqual(
+      Array.from({ length: keyedPieces.length }, () => design.assemblies['chamber-0']?.parts),
+    );
+    expect(design.assemblies['chamber-0']?.parts).toHaveLength(3);
+    expect(design.assemblies['coral-carriage']?.parts.every((part) => part.tone === 'coral')).toBe(true);
+    expect(design.staticParts.some((part) => part.size[0] > 1.3)).toBe(true);
+    expect(design.staticParts.some((part) => part.size[1] > 3.5 && part.position[0] < 0)).toBe(true);
+  });
+
+  it('keeps the Index Engine inside its five-call scene allowance', () => {
+    const design = towerDesign('index-engine', 4.5);
+    const budget = estimateTowerDesignBudget('index-engine', 4.5);
+    const envelope = towerDesignEnvelope(design);
+
+    expect(budget.drawCalls).toBe(5);
+    expect(budget.triangles).toBeLessThanOrEqual(720);
+    expect(envelope.width).toBeLessThanOrEqual(1.8);
+    expect(envelope.depth).toBeLessThanOrEqual(1.8);
+    expect(envelope.height).toBeLessThanOrEqual(4.9);
   });
 
   it('gives all four landmarks distinct three-dimensional proportions', () => {

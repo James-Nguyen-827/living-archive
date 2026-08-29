@@ -32,12 +32,14 @@ import {
 } from './world-materials';
 import {
   advanceTowerReaction,
+  INDEX_ENGINE_REACTION_DURATIONS,
+  indexEngineAmbientCarriageOffset,
+  indexEngineCarriagePose,
+  indexEngineChamberPose,
+  indexEngineCrownHalfPose,
   orreryBeamPose,
   orreryBeaconGlow,
   orreryRingPose,
-  pageBreathYaw,
-  pagewellBookmarkTilt,
-  pagewellFolioYaw,
   paradoxCubePose,
   paradoxFrameIdleSpin,
   paradoxFramePose,
@@ -269,54 +271,72 @@ function ProjectCourtTower({ module, theme, active, reducedMotion, reactionSeque
   );
 }
 
-function PagewellTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
+function IndexEngineTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
   const height = module.size[1];
-  const design = useMemo(() => towerDesign('pagewell', height), [height]);
-  const reaction = useTowerReaction(active, reactionSequence, reducedMotion);
-  const folios = useRef<InstancedMesh>(null);
-  const bookmark = useRef<Group>(null);
+  const design = useMemo(() => towerDesign('index-engine', height), [height]);
+  const reaction = useTowerReaction(
+    active,
+    reactionSequence,
+    reducedMotion,
+    INDEX_ENGINE_REACTION_DURATIONS,
+  );
+  const keyedPieces = useRef<InstancedMesh>(null);
+  const carriage = useRef<Group>(null);
   const dummy = useMemo(() => new Object3D(), []);
-  const folioAssemblies = useMemo(
-    () => Array.from({ length: 5 }, (_unused, index) => assembly(design, `folio-${index}`)),
+  const pieceAssemblies = useMemo(
+    () => [
+      ...Array.from({ length: 4 }, (_unused, index) => assembly(design, `chamber-${index}`)),
+      ...Array.from({ length: 2 }, (_unused, index) => assembly(design, `crown-half-${index}`)),
+    ],
     [design],
   );
-  const folioGeometry = useMemo(
-    () => buildRuinMeshes(folioAssemblies[0]!.parts)[0]!.geometry,
-    [folioAssemblies],
+  const pieceGeometry = useMemo(
+    () => buildRuinMeshes(pieceAssemblies[0]!.parts)[0]!.geometry,
+    [pieceAssemblies],
   );
-  const bookmarkAssembly = assembly(design, 'bookmark');
+  const carriageAssembly = assembly(design, 'coral-carriage');
 
   useFrame(({ clock }) => {
     const progress = reaction.current.progress;
-    if (folios.current) {
-      folioAssemblies.forEach((folio, index) => {
-        const ambient = pageBreathYaw(clock.elapsedTime, index, folioAssemblies.length, reducedMotion)
-          * (1 - progress);
-        dummy.position.set(...folio.position);
-        dummy.rotation.set(0, pagewellFolioYaw(progress, index) + ambient, 0);
-        dummy.scale.set(1, 1, 1);
+    if (keyedPieces.current) {
+      pieceAssemblies.forEach((piece, index) => {
+        const pose = index < 4
+          ? indexEngineChamberPose(progress, index)
+          : indexEngineCrownHalfPose(progress, index - 4);
+        dummy.position.set(...pose.position);
+        dummy.rotation.set(...pose.rotation);
+        dummy.scale.set(...(piece.scale ?? [1, 1, 1]));
         dummy.updateMatrix();
-        folios.current!.setMatrixAt(index, dummy.matrix);
+        keyedPieces.current!.setMatrixAt(index, dummy.matrix);
       });
-      folios.current.instanceMatrix.needsUpdate = true;
+      keyedPieces.current.instanceMatrix.needsUpdate = true;
     }
-    if (bookmark.current) bookmark.current.rotation.z = pagewellBookmarkTilt(progress);
+    if (carriage.current) {
+      const pose = indexEngineCarriagePose(progress);
+      carriage.current.position.set(
+        pose.position[0],
+        pose.position[1] + indexEngineAmbientCarriageOffset(clock.elapsedTime, reducedMotion) * (1 - progress),
+        pose.position[2],
+      );
+      carriage.current.rotation.set(...pose.rotation);
+    }
   });
 
   return (
     <TowerPlacement module={module}>
       <MergedParts parts={design.staticParts} theme={theme} reducedMotion={reducedMotion} />
       <instancedMesh
-        ref={folios}
-        args={[folioGeometry, undefined, folioAssemblies.length]}
+        name="index-engine-pieces"
+        ref={keyedPieces}
+        args={[pieceGeometry, undefined, pieceAssemblies.length]}
         castShadow
         receiveShadow
         frustumCulled={false}
       >
-        <AnimatedLambert tone="structure" theme={theme} />
+        <AnimatedLambert tone="surface" theme={theme} reducedMotion={reducedMotion} />
       </instancedMesh>
-      <group ref={bookmark} position={bookmarkAssembly.position}>
-        <MergedParts parts={bookmarkAssembly.parts} theme={theme} reducedMotion={reducedMotion} beaconTones={['coral']} />
+      <group name="index-engine-carriage" ref={carriage} position={carriageAssembly.position}>
+        <MergedParts parts={carriageAssembly.parts} theme={theme} reducedMotion={reducedMotion} beaconTones={['coral']} />
       </group>
       <TowerWindows parts={design.windows} theme={theme} active={active} reducedMotion={reducedMotion} />
     </TowerPlacement>
@@ -465,7 +485,7 @@ export function TowerModule({ module, theme, active, reducedMotion, reactionSequ
   const archetype = towerArchetypeFromModuleId(module.id);
   switch (archetype) {
     case 'project-court': return <ProjectCourtTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
-    case 'pagewell': return <PagewellTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
+    case 'index-engine': return <IndexEngineTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
     case 'paradox-gate': return <ParadoxGateTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
     case 'orrery': return <OrreryBeaconTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
   }

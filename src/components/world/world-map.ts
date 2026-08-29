@@ -136,7 +136,7 @@ export const ZONE_NODES: Record<ZoneId, string> = {
 
 export const WORLD_REACTIONS: readonly WorldReaction[] = [
   { zone: 'work', kind: 'bridge-sweep', moduleIds: ['work-bridge', 'work-tower'], durationMs: 1_050 },
-  { zone: 'field-notes', kind: 'page-riffle', moduleIds: ['notes-tower'], durationMs: 1_050 },
+  { zone: 'field-notes', kind: 'index-sequence', moduleIds: ['notes-tower'], durationMs: 1_400 },
   { zone: 'experiments', kind: 'gate-slot', moduleIds: ['experiments-platform', 'experiments-tower'], durationMs: 1_050 },
   { zone: 'hobbies', kind: 'carousel-spin', moduleIds: ['hobbies-carousel'], durationMs: 620 },
   { zone: 'about', kind: 'lantern-rings', moduleIds: ['about-tower'], durationMs: 1_050 },

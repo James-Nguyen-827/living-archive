@@ -85,10 +85,20 @@ describe('WORLD_MAP stable sculpture', () => {
     expect(platformEdge.south - footprint.south).toBeGreaterThanOrEqual(minMargin);
   });
 
-  it('binds every narrative tower to the shared 1.05 second arrival contract', () => {
+  it('binds the Index Engine to its longer arrival contract without changing the public tower id', () => {
+    const reaction = WORLD_REACTIONS.find((candidate) => candidate.zone === 'field-notes');
+
+    expect(reaction).toEqual({
+      zone: 'field-notes',
+      kind: 'index-sequence',
+      moduleIds: ['notes-tower'],
+      durationMs: 1_400,
+    });
+  });
+
+  it('keeps the other narrative towers on their authored arrival contracts', () => {
     const towerByZone = new Map([
       ['work', 'work-tower'],
-      ['field-notes', 'notes-tower'],
       ['experiments', 'experiments-tower'],
       ['about', 'about-tower'],
     ] as const);
