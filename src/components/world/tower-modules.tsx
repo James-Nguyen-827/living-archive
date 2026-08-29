@@ -32,23 +32,29 @@ import {
 } from './world-materials';
 import {
   advanceTowerReaction,
+  easeOutQuint,
+  INDEX_ENGINE_REACTION_DURATIONS,
+  indexEngineAmbientCarriageOffset,
+  indexEngineCarriagePose,
+  indexEngineChamberAmbientPose,
+  indexEngineChamberPose,
+  indexEngineCrownHalfPose,
   orreryBeamPose,
+  orreryBeamSweep,
   orreryBeaconGlow,
   orreryRingPose,
-  pageBreathYaw,
-  pagewellBookmarkTilt,
-  pagewellFolioYaw,
   paradoxCubePose,
   paradoxFrameIdleSpin,
   paradoxFramePose,
   PROJECT_COURT_REACTION_DURATIONS,
+  projectCourtAmbientPose,
   projectCourtPose,
   themeTransitionProgress,
   towerWindowGlow,
   type TowerReactionDurations,
   type TowerReactionState,
 } from './world-motion';
-import type { WorldModule } from './world-types';
+import { moduleYaw, type WorldModule } from './world-types';
 
 type TowerProps = {
   module: WorldModule;
@@ -196,7 +202,7 @@ function TowerPlacement({ module, children }: { module: WorldModule; children: R
         module.transform.position[1] - DECOR_GROUND_SNAP,
         module.transform.position[2],
       ]}
-      rotation={[0, module.transform.quarterTurns * Math.PI / 2, 0]}
+      rotation={[0, moduleYaw(module.transform), 0]}
     >
       {children}
     </group>
@@ -225,21 +231,34 @@ function ProjectCourtTower({ module, theme, active, reducedMotion, reactionSeque
   const frontSlabAssembly = assembly(design, 'front-slab');
   const coralGantryAssembly = assembly(design, 'coral-gantry');
 
-  useFrame(() => {
+  useFrame(({ clock }) => {
     const progress = reaction.current.progress;
     const pose = projectCourtPose(progress);
+    const ambient = (progress <= 0 || progress >= 1)
+      ? projectCourtAmbientPose(clock.elapsedTime, progress >= 1, reducedMotion)
+      : {
+        rearSlabLift: 0,
+        frontSlabLift: 0,
+        gantryYOffset: 0,
+        gantryYawOffset: 0,
+        gantryScaleZOffset: 0,
+      };
     if (rearSlab.current) {
       rearSlab.current.rotation.y = pose.rearSlabYaw;
-      rearSlab.current.position.y = rearSlabAssembly.position[1] + pose.rearSlabLift;
+      rearSlab.current.position.y = rearSlabAssembly.position[1] + pose.rearSlabLift + ambient.rearSlabLift;
     }
     if (frontSlab.current) {
       frontSlab.current.rotation.y = pose.frontSlabYaw;
-      frontSlab.current.position.y = frontSlabAssembly.position[1] + pose.frontSlabLift;
+      frontSlab.current.position.y = frontSlabAssembly.position[1] + pose.frontSlabLift + ambient.frontSlabLift;
     }
     if (coralGantry.current) {
-      coralGantry.current.position.set(...pose.gantryPosition);
-      coralGantry.current.rotation.set(0, pose.gantryYaw, 0);
-      coralGantry.current.scale.set(1, 1, pose.gantryScaleZ);
+      coralGantry.current.position.set(
+        pose.gantryPosition[0],
+        pose.gantryPosition[1] + ambient.gantryYOffset,
+        pose.gantryPosition[2],
+      );
+      coralGantry.current.rotation.set(0, pose.gantryYaw + ambient.gantryYawOffset, 0);
+      coralGantry.current.scale.set(1, 1, pose.gantryScaleZ + ambient.gantryScaleZOffset);
     }
   });
 
@@ -269,54 +288,108 @@ function ProjectCourtTower({ module, theme, active, reducedMotion, reactionSeque
   );
 }
 
-function PagewellTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
+function IndexEngineTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
   const height = module.size[1];
-  const design = useMemo(() => towerDesign('pagewell', height), [height]);
-  const reaction = useTowerReaction(active, reactionSequence, reducedMotion);
-  const folios = useRef<InstancedMesh>(null);
-  const bookmark = useRef<Group>(null);
+  const design = useMemo(() => towerDesign('index-engine', height), [height]);
+  const reaction = useTowerReaction(
+    active,
+    reactionSequence,
+    reducedMotion,
+    INDEX_ENGINE_REACTION_DURATIONS,
+  );
+  const chambers = useRef<InstancedMesh>(null);
+  const crownHalves = useRef<InstancedMesh>(null);
+  const carriage = useRef<Group>(null);
   const dummy = useMemo(() => new Object3D(), []);
-  const folioAssemblies = useMemo(
-    () => Array.from({ length: 5 }, (_unused, index) => assembly(design, `folio-${index}`)),
+  const chamberAssemblies = useMemo(
+    () => Array.from({ length: 4 }, (_unused, index) => assembly(design, `chamber-${index}`)),
     [design],
   );
-  const folioGeometry = useMemo(
-    () => buildRuinMeshes(folioAssemblies[0]!.parts)[0]!.geometry,
-    [folioAssemblies],
+  const crownAssemblies = useMemo(
+    () => Array.from({ length: 2 }, (_unused, index) => assembly(design, `crown-half-${index}`)),
+    [design],
   );
-  const bookmarkAssembly = assembly(design, 'bookmark');
+  const chamberGeometry = useMemo(
+    () => buildRuinMeshes(chamberAssemblies[0]!.parts)[0]!.geometry,
+    [chamberAssemblies],
+  );
+  const crownGeometry = useMemo(
+    () => buildRuinMeshes(crownAssemblies[0]!.parts)[0]!.geometry,
+    [crownAssemblies],
+  );
+  const carriageAssembly = assembly(design, 'coral-carriage');
 
   useFrame(({ clock }) => {
     const progress = reaction.current.progress;
-    if (folios.current) {
-      folioAssemblies.forEach((folio, index) => {
-        const ambient = pageBreathYaw(clock.elapsedTime, index, folioAssemblies.length, reducedMotion)
-          * (1 - progress);
-        dummy.position.set(...folio.position);
-        dummy.rotation.set(0, pagewellFolioYaw(progress, index) + ambient, 0);
-        dummy.scale.set(1, 1, 1);
+    if (chambers.current) {
+      chamberAssemblies.forEach((piece, index) => {
+        const pose = indexEngineChamberPose(progress, index);
+        const ambient = progress <= 0 || progress >= 1
+          ? indexEngineChamberAmbientPose(clock.elapsedTime, index, reducedMotion)
+          : { position: [0, 0, 0] as const, rotation: [0, 0, 0] as const };
+        dummy.position.set(
+          pose.position[0] + ambient.position[0],
+          pose.position[1] + ambient.position[1],
+          pose.position[2] + ambient.position[2],
+        );
+        dummy.rotation.set(
+          pose.rotation[0] + ambient.rotation[0],
+          pose.rotation[1] + ambient.rotation[1],
+          pose.rotation[2] + ambient.rotation[2],
+        );
+        dummy.scale.set(...(piece.scale ?? [1, 1, 1]));
         dummy.updateMatrix();
-        folios.current!.setMatrixAt(index, dummy.matrix);
+        chambers.current!.setMatrixAt(index, dummy.matrix);
       });
-      folios.current.instanceMatrix.needsUpdate = true;
+      chambers.current.instanceMatrix.needsUpdate = true;
     }
-    if (bookmark.current) bookmark.current.rotation.z = pagewellBookmarkTilt(progress);
+    if (crownHalves.current) {
+      crownAssemblies.forEach((piece, index) => {
+        const pose = indexEngineCrownHalfPose(progress, index);
+        dummy.position.set(...pose.position);
+        dummy.rotation.set(...pose.rotation);
+        dummy.scale.set(...(piece.scale ?? [1, 1, 1]));
+        dummy.updateMatrix();
+        crownHalves.current!.setMatrixAt(index, dummy.matrix);
+      });
+      crownHalves.current.instanceMatrix.needsUpdate = true;
+    }
+    if (carriage.current) {
+      const pose = indexEngineCarriagePose(progress);
+      carriage.current.position.set(
+        pose.position[0],
+        pose.position[1] + indexEngineAmbientCarriageOffset(clock.elapsedTime, reducedMotion) * (1 - progress),
+        pose.position[2],
+      );
+      carriage.current.rotation.set(...pose.rotation);
+    }
   });
 
   return (
     <TowerPlacement module={module}>
       <MergedParts parts={design.staticParts} theme={theme} reducedMotion={reducedMotion} />
       <instancedMesh
-        ref={folios}
-        args={[folioGeometry, undefined, folioAssemblies.length]}
+        name="index-engine-chambers"
+        ref={chambers}
+        args={[chamberGeometry, undefined, chamberAssemblies.length]}
         castShadow
         receiveShadow
         frustumCulled={false}
       >
-        <AnimatedLambert tone="structure" theme={theme} />
+        <AnimatedLambert tone="structure" theme={theme} reducedMotion={reducedMotion} />
       </instancedMesh>
-      <group ref={bookmark} position={bookmarkAssembly.position}>
-        <MergedParts parts={bookmarkAssembly.parts} theme={theme} reducedMotion={reducedMotion} beaconTones={['coral']} />
+      <instancedMesh
+        name="index-engine-crown"
+        ref={crownHalves}
+        args={[crownGeometry, undefined, crownAssemblies.length]}
+        castShadow
+        receiveShadow
+        frustumCulled={false}
+      >
+        <AnimatedLambert tone="surface" theme={theme} reducedMotion={reducedMotion} />
+      </instancedMesh>
+      <group name="index-engine-carriage" ref={carriage} position={carriageAssembly.position}>
+        <MergedParts parts={carriageAssembly.parts} theme={theme} reducedMotion={reducedMotion} beaconTones={['coral']} />
       </group>
       <TowerWindows parts={design.windows} theme={theme} active={active} reducedMotion={reducedMotion} />
     </TowerPlacement>
@@ -408,6 +481,7 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
     [ringAssemblies],
   );
   const advanceBeamNightMix = useNightMix(theme, reducedMotion);
+  const { invalidate } = useThree();
   const inwardYaw = useMemo(() => (
     Math.atan2(module.transform.position[0], module.transform.position[2])
     - module.transform.quarterTurns * Math.PI / 2
@@ -421,7 +495,8 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
       ring.rotation.set(pose.rotationX, pose.rotationY, pose.rotationZ);
     });
     const beamPose = orreryBeamPose(progress, inwardYaw);
-    if (beamPivot.current) beamPivot.current.rotation.y = beamPose.yaw;
+    const sweep = orreryBeamSweep(clock.elapsedTime, active, reducedMotion) * easeOutQuint(progress);
+    if (beamPivot.current) beamPivot.current.rotation.y = beamPose.yaw + sweep;
     if (beam.current) {
       const nightMix = advanceBeamNightMix(delta);
       const material = beam.current.material as MeshBasicMaterial;
@@ -429,32 +504,34 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
       material.opacity = beamPose.opacity * MathUtils.lerp(0.62, 1, nightMix);
       beam.current.visible = material.opacity > 0.001;
     }
+    if (active && progress > 0.02 && beamPose.opacity > 0.001 && !reducedMotion) invalidate();
   });
 
   return (
     <TowerPlacement module={module}>
       <MergedParts parts={design.staticParts} theme={theme} reducedMotion={reducedMotion} beaconTones={['coral']} />
-      {ringAssemblies.map((ring, index) => (
-        <group
-          key={index}
-          ref={(node) => { rings.current[index] = node; }}
-          position={ring.position}
-        >
-          <mesh geometry={ringMeshes[index]!.geometry} castShadow>
-            <OrreryRingMesh theme={theme} active={active} reducedMotion={reducedMotion} />
+      <group position={ringAssemblies[0]!.position}>
+        {ringAssemblies.map((_ring, index) => (
+          <group
+            key={index}
+            ref={(node) => { rings.current[index] = node; }}
+          >
+            <mesh geometry={ringMeshes[index]!.geometry} castShadow>
+              <OrreryRingMesh theme={theme} active={active} reducedMotion={reducedMotion} />
+            </mesh>
+          </group>
+        ))}
+        <group ref={beamPivot}>
+          <mesh ref={beam} position={[0, 0, -1.3]} rotation={[Math.PI / 2, 0, 0]} visible={false}>
+            <cylinderGeometry args={[0.035, 0.22, 2.6, 6, 1, true]} />
+            <meshBasicMaterial
+              color={theme === 'night' ? TOWER_WINDOW.night : TOWER_WINDOW.day}
+              transparent
+              opacity={0}
+              depthWrite={false}
+            />
           </mesh>
         </group>
-      ))}
-      <group ref={beamPivot} position={ringAssemblies[0]!.position}>
-        <mesh ref={beam} position={[0, 0, -1.3]} rotation={[Math.PI / 2, 0, 0]} visible={false}>
-          <cylinderGeometry args={[0.035, 0.22, 2.6, 6, 1, true]} />
-          <meshBasicMaterial
-            color={theme === 'night' ? TOWER_WINDOW.night : TOWER_WINDOW.day}
-            transparent
-            opacity={0}
-            depthWrite={false}
-          />
-        </mesh>
       </group>
       <TowerWindows parts={design.windows} theme={theme} active={active} reducedMotion={reducedMotion} />
     </TowerPlacement>
@@ -465,7 +542,7 @@ export function TowerModule({ module, theme, active, reducedMotion, reactionSequ
   const archetype = towerArchetypeFromModuleId(module.id);
   switch (archetype) {
     case 'project-court': return <ProjectCourtTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
-    case 'pagewell': return <PagewellTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
+    case 'index-engine': return <IndexEngineTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
     case 'paradox-gate': return <ParadoxGateTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
     case 'orrery': return <OrreryBeaconTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
   }

@@ -53,7 +53,8 @@ export function estimateSceneBudget(
   const travelerCalls = 2;
   const shadowGroundCalls = 1;
   const seaPlaneCalls = 1;
-  const drawCalls = boxMeshes + otherMeshes + towerDrawCalls + instancedCalls + vegetationBudget.drawCalls + carouselCalls + travelerCalls + shadowGroundCalls + seaPlaneCalls;
+  const landingPadCalls = 2;
+  const drawCalls = boxMeshes + otherMeshes + towerDrawCalls + instancedCalls + vegetationBudget.drawCalls + carouselCalls + travelerCalls + shadowGroundCalls + seaPlaneCalls + landingPadCalls;
   const triangles = boxMeshes * 12 + otherMeshes * 20 + towerTriangles + vegetationBudget.triangles + ruinMeshes * 12 + carouselTriangles + 120;
   return { drawCalls, triangles };
 }

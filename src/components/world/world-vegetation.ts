@@ -38,7 +38,7 @@ export const VEGETATION_DEFINITIONS: readonly VegetationDefinition[] = [
   { kind: 'shrub', position: [-1.25, 0.25, -1.75] },
   { kind: 'pine', position: [-8, -0.25, 0.85] },
   { kind: 'shrub', position: [-6.05, -0.25, -0.95] },
-  { kind: 'pine', position: [1, 0.75, -7] },
+  { kind: 'pine', position: [1, 0.75, -9] },
   { kind: 'shrub', position: [-1, 0.75, -7] },
   { kind: 'shrub', position: [7, 0.75, 1.2] },
   { kind: 'shrub', position: [9, 0.75, 1.2] },

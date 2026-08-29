@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const TOWERS = [
   { name: 'Work', snapshot: 'project-court-active.png' },
-  { name: 'Field Notes', snapshot: 'pagewell-active.png' },
+  { name: 'Field Notes', snapshot: 'index-engine-active.png' },
   { name: 'Experiments', snapshot: 'paradox-gate-active.png' },
   { name: 'About', snapshot: 'orrery-beacon-active.png' },
 ] as const;

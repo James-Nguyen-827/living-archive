@@ -7,8 +7,8 @@ const ZONES: ZoneId[] = ['work', 'field-notes', 'experiments', 'hobbies', 'about
 describe('zone label anchors', () => {
   it('places anchors on the horizontal center of each sculpture', () => {
     expect(zoneLabelAnchor('work')).toEqual([-7, expect.any(Number), 0]);
-    expect(zoneLabelAnchor('field-notes')[0]).toBe(1);
-    expect(zoneLabelAnchor('field-notes')[2]).toBe(-9);
+    expect(zoneLabelAnchor('field-notes')[0]).toBe(0);
+    expect(zoneLabelAnchor('field-notes')[2]).toBe(-8);
     expect(zoneLabelAnchor('experiments')[0]).toBe(8);
     expect(zoneLabelAnchor('experiments')[2]).toBe(-1);
     expect(zoneLabelAnchor('about')[0]).toBe(7);

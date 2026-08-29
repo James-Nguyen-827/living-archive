@@ -9,7 +9,7 @@ import {
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { PaletteKey } from './world-materials';
 
-export type TowerArchetype = 'project-court' | 'pagewell' | 'paradox-gate' | 'orrery';
+export type TowerArchetype = 'project-court' | 'index-engine' | 'paradox-gate' | 'orrery';
 export type CompassFace = 'north' | 'east' | 'south' | 'west';
 
 export type TonedPart<Tone extends string = PaletteKey> = {
@@ -26,6 +26,7 @@ export type WindowPart = Omit<TonedPart<'window'>, 'tone'> & {
 export interface TowerAssembly {
   position: [number, number, number];
   scale?: [number, number, number];
+  rotation?: [number, number, number];
   instanceGroup?: string;
   parts: readonly TonedPart[];
 }
@@ -40,7 +41,7 @@ export interface TowerDesign {
 export function towerArchetypeFromModuleId(moduleId: string): TowerArchetype {
   switch (moduleId) {
     case 'work-tower': return 'project-court';
-    case 'notes-tower': return 'pagewell';
+    case 'notes-tower': return 'index-engine';
     case 'experiments-tower': return 'paradox-gate';
     default: return 'orrery';
   }
@@ -103,14 +104,21 @@ function fourFaceWindows(
 
 function translatedAssemblyParts(assembly: TowerAssembly): readonly TonedPart[] {
   const scale = assembly.scale ?? [1, 1, 1];
+  const rotation = assembly.rotation ?? [0, 0, 0];
+  const assemblyRotation = new Euler(...rotation);
   return assembly.parts.map((part) => ({
     ...part,
-    position: [
-      part.position[0] * scale[0] + assembly.position[0],
-      part.position[1] * scale[1] + assembly.position[1],
-      part.position[2] * scale[2] + assembly.position[2],
-    ],
+    position: new Vector3(
+      part.position[0] * scale[0],
+      part.position[1] * scale[1],
+      part.position[2] * scale[2],
+    ).applyEuler(assemblyRotation).add(new Vector3(...assembly.position)).toArray() as [number, number, number],
     size: [part.size[0] * scale[0], part.size[1] * scale[1], part.size[2] * scale[2]],
+    rotation: [
+      (part.rotation?.[0] ?? 0) + rotation[0],
+      (part.rotation?.[1] ?? 0) + rotation[1],
+      (part.rotation?.[2] ?? 0) + rotation[2],
+    ],
   }));
 }
 
@@ -169,40 +177,48 @@ function projectCourtDesign(_height: number): TowerDesign {
   };
 }
 
-function pagewellFolioParts(_index: number): readonly TonedPart[] {
+function indexEngineKeyedPieceParts(tone: PaletteKey): readonly TonedPart[] {
   return [
-    { position: [0.2, 0, 0], size: [0.78, 0.17, 0.22], tone: 'structure' },
-    { position: [0.49, 0, 0.22], size: [0.22, 0.17, 0.66], tone: 'structure' },
+    { position: [-0.18, 0, 0], size: [0.12, 0.62, 0.2], tone },
+    { position: [0.04, 0.26, 0], size: [0.44, 0.12, 0.2], tone },
+    { position: [0.04, -0.26, 0], size: [0.44, 0.12, 0.2], tone },
   ];
 }
 
-function pagewellDesign(height: number): TowerDesign {
+function indexEngineDesign(height: number): TowerDesign {
   const staticParts: readonly TonedPart[] = [
-    { position: [0, 0.1, 0], size: [1.08, 0.2, 0.9], tone: 'structure' },
-    { position: [0, height * 0.48, 0], size: [0.34, height * 0.9, 0.34], tone: 'surface' },
-    { position: [0, height * 0.22, 0], size: [0.56, 0.1, 0.56], tone: 'structure' },
-    { position: [0, height * 0.63, 0], size: [0.52, 0.1, 0.52], tone: 'structure' },
+    { position: [0, 0.1, 0], size: [1.5, 0.2, 1.2], tone: 'structure' },
+    { position: [0.08, 0.26, 0], size: [1.16, 0.12, 0.92], tone: 'structure' },
+    { position: [-0.32, height * 0.46, 0.13], size: [0.22, height * 0.86, 0.28], tone: 'surface' },
+    { position: [0, height * 0.46, 0], size: [0.42, height * 0.82, 0.42], tone: 'surface' },
+    { position: [0.38, height * 0.22, -0.28], size: [0.1, height * 0.38, 0.1], tone: 'structure' },
+    { position: [0.38, height * 0.4, 0.1], size: [0.1, 0.1, 0.76], tone: 'structure' },
+    { position: [0.19, height * 0.4, -0.28], size: [0.42, 0.1, 0.1], tone: 'structure' },
   ];
-  const folioYs = Array.from({ length: 5 }, (_unused, index) => 0.56 + index * ((height - 1) / 4));
-  const assemblies: Record<string, TowerAssembly> = Object.fromEntries(
-    folioYs.map((y, index) => [`folio-${index}`, {
-      position: [0, y, 0],
-      instanceGroup: 'folios',
-      parts: pagewellFolioParts(index),
-    }]),
-  );
-  assemblies.bookmark = {
-    position: [0.06, height + 0.08, 0.2],
-    parts: [{ position: [0, 0, 0], size: [0.08, 0.44, 0.06], tone: 'coral' }],
+  const chamberPiece = indexEngineKeyedPieceParts('structure');
+  const crownPiece = indexEngineKeyedPieceParts('surface');
+  const assemblies: Readonly<Record<string, TowerAssembly>> = {
+    'chamber-0': { position: [0.38, 0.85, 0.15], scale: [1, 0.85, 1], instanceGroup: 'index-engine-chambers', parts: chamberPiece },
+    'chamber-1': { position: [-0.3, 1.63, -0.16], scale: [0.92, 0.92, 0.92], rotation: [0, Math.PI / 2, 0], instanceGroup: 'index-engine-chambers', parts: chamberPiece },
+    'chamber-2': { position: [0.28, 2.4, -0.15], scale: [1.05, 0.9, 1], rotation: [0, Math.PI, 0], instanceGroup: 'index-engine-chambers', parts: chamberPiece },
+    'chamber-3': { position: [-0.35, 3.16, 0.14], scale: [0.94, 0.88, 0.94], rotation: [0, Math.PI * 1.5, 0], instanceGroup: 'index-engine-chambers', parts: chamberPiece },
+    'crown-half-0': { position: [0.2, 4.0, 0.1], scale: [1.1, 0.9, 1], instanceGroup: 'index-engine-crown', parts: crownPiece },
+    'crown-half-1': { position: [-0.2, 4.0, -0.1], scale: [1.1, 0.9, 1], rotation: [0, Math.PI, 0], instanceGroup: 'index-engine-crown', parts: crownPiece },
+    'coral-carriage': {
+      position: [0, 4.38, 0],
+      parts: [
+        { position: [0, 0, 0], size: [0.28, 0.28, 0.28], tone: 'coral' },
+      ],
+    },
   };
   const extentParts: readonly TonedPart[] = [
     ...staticParts,
     ...Object.values(assemblies).flatMap(translatedAssemblyParts),
-    { position: [0, (height + 0.32) / 2, 0], size: [1.65, height + 0.32, 1.65], tone: 'surface' as const },
+    { position: [0, 2.44, 0], size: [1.8, 4.88, 1.8], tone: 'surface' as const },
   ];
   return {
     staticParts,
-    windows: fourFaceWindows(0.34, 0.34, [0.72, 1.52, 2.32, 3.12, height - 0.38]),
+    windows: fourFaceWindows(0.42, 0.42, [0.72, 1.48, 2.24, 3, 3.76]),
     assemblies,
     extentParts,
   };
@@ -274,6 +290,10 @@ function ellipseRingParts(radiusX: number, radiusZ: number, segments: number): r
   });
 }
 
+function circleRingParts(radius: number, segments: number): readonly TonedPart[] {
+  return ellipseRingParts(radius, radius, segments);
+}
+
 function orreryDesign(height: number): TowerDesign {
   const ringY = height * 0.9;
   const staticParts: readonly TonedPart[] = [
@@ -285,9 +305,9 @@ function orreryDesign(height: number): TowerDesign {
     { position: [0, ringY, 0], size: [0.22, 0.22, 0.22], tone: 'coral' },
   ];
   const assemblies: Readonly<Record<string, TowerAssembly>> = {
-    'ring-0': { position: [0, ringY, 0], parts: ellipseRingParts(0.76, 0.61, 16) },
-    'ring-1': { position: [0, ringY, 0], parts: ellipseRingParts(0.67, 0.52, 14) },
-    'ring-2': { position: [0, ringY, 0], parts: ellipseRingParts(0.5, 0.39, 12) },
+    'ring-0': { position: [0, ringY, 0], parts: circleRingParts(0.76, 16) },
+    'ring-1': { position: [0, ringY, 0], parts: circleRingParts(0.67, 14) },
+    'ring-2': { position: [0, ringY, 0], parts: circleRingParts(0.5, 12) },
   };
   const extentParts: readonly TonedPart[] = [
     ...staticParts,
@@ -305,7 +325,7 @@ function orreryDesign(height: number): TowerDesign {
 export function towerDesign(archetype: TowerArchetype, height: number): TowerDesign {
   switch (archetype) {
     case 'project-court': return projectCourtDesign(height);
-    case 'pagewell': return pagewellDesign(height);
+    case 'index-engine': return indexEngineDesign(height);
     case 'paradox-gate': return paradoxGateDesign(height);
     case 'orrery': return orreryDesign(height);
   }

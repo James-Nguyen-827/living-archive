@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  aboutSignalPose,
   angleFromDrag,
   cameraReframeProgress,
   degreesForAngle,
@@ -14,17 +13,23 @@ import {
   CAROUSEL_IDLE_SPIN_SPEED,
   coralBeaconGlow,
   advanceTowerReaction,
+  INDEX_ENGINE_REACTION_DURATIONS,
+  indexEngineAmbientCarriageOffset,
+  indexEngineCarriagePose,
+  indexEngineChamberAmbientPose,
+  indexEngineChamberPose,
+  indexEngineCrownHalfPose,
   gateBlockPose,
   lanternRingSpin,
   orreryBeamPose,
+  orreryBeamSweep,
   orreryBeaconGlow,
   orreryRingPose,
-  pagewellBookmarkTilt,
-  pagewellFolioYaw,
   pageRiffleYaw,
   paradoxCubePose,
   paradoxFrameIdleSpin,
   paradoxFramePose,
+  projectCourtAmbientPose,
   projectCourtPose,
   rotatePointY,
   signalBarProgress,
@@ -89,10 +94,6 @@ describe('world rotation motion', () => {
     expect(signalBarProgress(0, true, true)).toBe(1);
     expect(signalBarProgress(0, false, true)).toBe(0);
     expect(signalBarProgress(0.16, true, false)).toBeCloseTo(easeOutQuint(0.5));
-    expect(aboutSignalPose(0, true, true)).toEqual({ scale: 2.9, opacity: 0 });
-    expect(aboutSignalPose(0.8, true, false).scale).toBeCloseTo(2.9);
-    expect(aboutSignalPose(0.8, true, false).opacity).toBe(0);
-    expect(aboutSignalPose(0, false, false)).toEqual({ scale: 0.01, opacity: 0 });
   });
 
   it('keeps carousel bulbs dark by day until the hobbies zone is visited', () => {
@@ -337,12 +338,122 @@ describe('narrative tower reactions', () => {
     expect(frontEndpoint[1]).toBeCloseTo(2.24, 2);
   });
 
-  it('fans the Pagewell folios in a rising wave and tips its bookmark', () => {
-    expect(pagewellFolioYaw(0, 4)).toBeCloseTo(0.16);
-    expect(pagewellFolioYaw(0.45, 0)).toBeGreaterThan(pagewellFolioYaw(0, 0));
-    expect(pagewellFolioYaw(0.45, 0)).toBeGreaterThan(pagewellFolioYaw(0.45, 4));
-    expect(pagewellFolioYaw(1, 4)).toBeCloseTo(4 * Math.PI / 5);
-    expect(pagewellBookmarkTilt(1)).toBeCloseTo(0.35);
+  it('gives the Project Court gantry a bounded idle cradle hover at neutral and seated tension when held', () => {
+    const neutral = projectCourtAmbientPose(1.25, false, false);
+    const held = projectCourtAmbientPose(1.25, true, false);
+
+    expect(neutral.rearSlabLift).toBe(0);
+    expect(neutral.frontSlabLift).toBe(0);
+    expect(Math.abs(neutral.gantryYOffset)).toBeLessThanOrEqual(0.05);
+    expect(Math.abs(neutral.gantryYawOffset)).toBeLessThanOrEqual(0.04);
+    expect(Math.abs(neutral.gantryScaleZOffset)).toBeLessThanOrEqual(0.03);
+
+    expect(Math.abs(held.rearSlabLift)).toBeLessThanOrEqual(0.018);
+    expect(Math.abs(held.frontSlabLift)).toBeLessThanOrEqual(0.018);
+    expect(Math.abs(held.gantryYOffset)).toBeLessThanOrEqual(0.035);
+    expect(Math.abs(held.gantryYawOffset)).toBeLessThanOrEqual(0.02);
+    expect(Math.abs(held.gantryScaleZOffset)).toBeLessThanOrEqual(0.022);
+
+    expect(projectCourtAmbientPose(2, false, true)).toEqual({
+      rearSlabLift: 0,
+      frontSlabLift: 0,
+      gantryYOffset: 0,
+      gantryYawOffset: 0,
+      gantryScaleZOffset: 0,
+    });
+    expect(neutral).not.toEqual(held);
+  });
+
+  it('unlocks the Index Engine chambers bottom-to-top and then splits its crown', () => {
+    expect(INDEX_ENGINE_REACTION_DURATIONS).toEqual({ arrival: 1.4, exit: 0.8 });
+
+    const neutral = Array.from({ length: 4 }, (_unused, index) => indexEngineChamberPose(0, index));
+    expect(indexEngineChamberPose(0.15, 0)).toEqual(neutral[0]);
+    expect(indexEngineChamberPose(0.46, 0)).not.toEqual(neutral[0]);
+    expect(indexEngineChamberPose(0.46, 3)).toEqual(neutral[3]);
+    expect(indexEngineChamberPose(0.76, 2)).not.toEqual(neutral[2]);
+
+    const crownNeutral = indexEngineCrownHalfPose(0.77, 0);
+    const crownOpening = indexEngineCrownHalfPose(0.9, 0);
+    expect(crownOpening.position).not.toEqual(crownNeutral.position);
+    expect(indexEngineCrownHalfPose(0.9, 0).position[0]).toBeGreaterThan(0);
+    expect(indexEngineCrownHalfPose(0.9, 1).position[0]).toBeLessThan(0);
+  });
+
+  it('starts the coral cap on the guide base and climbs to the crown on arrival', () => {
+    const atBase = indexEngineCarriagePose(0);
+    const climbing = indexEngineCarriagePose(0.5);
+    const approach = indexEngineCarriagePose(0.94);
+    const docking = indexEngineCarriagePose(0.97);
+    const atCrown = indexEngineCarriagePose(1);
+
+    expect(atBase.position[1]).toBeCloseTo(0.55);
+    expect(climbing.position[1]).toBeGreaterThan(atBase.position[1]);
+    expect(climbing.position[1]).toBeLessThan(atCrown.position[1]!);
+    expect(atCrown.position).toEqual([0, 4.38, 0]);
+    expect(approach.position[1]).toBeLessThan(atCrown.position[1]!);
+    expect(docking.position[1]).toBeGreaterThan(approach.position[1]!);
+    expect(docking.position[1]).toBeLessThan(atCrown.position[1]!);
+  });
+
+  it('keeps the Index Engine carriage climb monotonic during arrival', () => {
+    const samples = Array.from(
+      { length: 94 },
+      (_unused, index) => indexEngineCarriagePose(index / 93).position[1],
+    );
+
+    samples.slice(1).forEach((y, index) => {
+      expect(y, `sample ${index + 1}`).toBeGreaterThanOrEqual(samples[index]!);
+    });
+  });
+
+  it('gives each chamber a bounded idle flutter at neutral and held progress', () => {
+    const neutral = Array.from({ length: 4 }, (_unused, index) => (
+      indexEngineChamberAmbientPose(1.25, index, false)
+    ));
+    const held = Array.from({ length: 4 }, (_unused, index) => (
+      indexEngineChamberAmbientPose(4.75, index, false)
+    ));
+
+    [...neutral, ...held].forEach((pose) => {
+      expect(Math.abs(pose.position[0])).toBeLessThanOrEqual(0.02);
+      expect(Math.abs(pose.position[1])).toBeLessThanOrEqual(0.03);
+      expect(Math.abs(pose.position[2])).toBeLessThanOrEqual(0.02);
+      expect(Math.abs(pose.rotation[0])).toBeLessThanOrEqual(0.03);
+      expect(Math.abs(pose.rotation[1])).toBeLessThanOrEqual(0.04);
+      expect(Math.abs(pose.rotation[2])).toBeLessThanOrEqual(0.03);
+    });
+    expect(indexEngineChamberAmbientPose(2, 0, true)).toEqual({
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+    });
+    expect(neutral[0]).not.toEqual(neutral[1]);
+  });
+
+  it('keeps Index Engine poses finite, clamped, and still once held', () => {
+    const poses = [
+      indexEngineChamberPose(-1, 0),
+      indexEngineChamberPose(2, 3),
+      indexEngineCrownHalfPose(-1, 0),
+      indexEngineCrownHalfPose(2, 1),
+      indexEngineCarriagePose(-1),
+      indexEngineCarriagePose(2),
+    ];
+
+    expect(indexEngineChamberPose(-1, 0)).toEqual(indexEngineChamberPose(0, 0));
+    expect(indexEngineChamberPose(2, 3)).toEqual(indexEngineChamberPose(1, 3));
+    expect(indexEngineCrownHalfPose(-1, 0)).toEqual(indexEngineCrownHalfPose(0, 0));
+    expect(indexEngineCrownHalfPose(2, 1)).toEqual(indexEngineCrownHalfPose(1, 1));
+    expect(indexEngineCarriagePose(-1)).toEqual(indexEngineCarriagePose(0));
+    expect(indexEngineCarriagePose(2)).toEqual(indexEngineCarriagePose(1));
+    expect(poses.flatMap((pose) => [...pose.position, ...pose.rotation]).every(Number.isFinite)).toBe(true);
+  });
+
+  it('keeps the neutral carriage ambient offset subtle and removes it for reduced motion', () => {
+    expect(indexEngineAmbientCarriageOffset(2, true)).toBe(0);
+    for (const elapsed of [0, 0.25, 0.5, 1.2, 2.4]) {
+      expect(Math.abs(indexEngineAmbientCarriageOffset(elapsed, false))).toBeLessThanOrEqual(0.03);
+    }
   });
 
   it('counter-spins the Paradox Gate frames while idle', () => {
@@ -387,5 +498,13 @@ describe('narrative tower reactions', () => {
     const held = orreryBeamPose(1, -2.42);
     expect(held.yaw).toBeCloseTo(-2.42);
     expect(held.opacity).toBeCloseTo(0.34);
+  });
+
+  it('passively sweeps the Orrery beam while About is held open', () => {
+    expect(orreryBeamSweep(0, false, false)).toBe(0);
+    expect(orreryBeamSweep(0, true, true)).toBe(0);
+    expect(orreryBeamSweep(0, true, false)).toBe(0);
+    expect(orreryBeamSweep(Math.PI / (2 * 0.72), true, false)).toBeCloseTo(0.48);
+    expect(orreryBeamSweep(1.2, true, false)).not.toBe(orreryBeamSweep(2.4, true, false));
   });
 });
