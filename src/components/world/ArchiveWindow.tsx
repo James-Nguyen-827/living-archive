@@ -23,7 +23,7 @@ export function ArchiveWindow({ content, phase, zones, onClose, onSelectZone, on
 
   useEffect(() => {
     if (phase !== 'closing-window') {
-      const frame = requestAnimationFrame(() => panelRef.current?.focus());
+      const frame = requestAnimationFrame(() => panelRef.current?.focus({ preventScroll: true }));
       return () => cancelAnimationFrame(frame);
     }
   }, [content, phase]);

@@ -37,7 +37,7 @@
 }
 
 .world-explorer:focus-visible { outline: .18rem solid var(--coral); outline-offset: -.18rem; }
-.world-viewport canvas { touch-action: none; cursor: grab; }
+.world-viewport canvas { touch-action: pan-y; cursor: grab; }
 .world-explorer:active .world-viewport canvas { cursor: grabbing; }
 
 .world-fallback { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; }
@@ -199,7 +199,10 @@
 @keyframes archive-entry-morph { 0% { opacity: 0; clip-path: inset(100% 0 0); } 38% { opacity: 0; } 100% { opacity: 1; clip-path: inset(0); } }
 
 @media (max-width: 48rem) {
-  .world-explorer { height: 42rem; min-height: 42rem; }
+  .world-explorer {
+    height: min(42rem, calc(100svh - var(--header-height)));
+    min-height: min(42rem, calc(100svh - var(--header-height)));
+  }
   .world-zone-labels a { min-width: 2.75rem; min-height: 2.75rem; padding: .38rem .42rem; font-size: .64rem; }
   .world-help {
     right: .75rem;
@@ -241,7 +244,7 @@
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
-    padding: 0 1.25rem;
+    padding: 0 1.25rem calc(4.25rem + env(safe-area-inset-bottom));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -250,12 +253,12 @@
     font-size: clamp(1.75rem, 7vw, 2.25rem);
   }
   .archive-window__content > p { margin-bottom: .75rem; font-size: .95rem; }
-  .archive-window ol { flex: 1 1 auto; margin: .75rem 0 0; min-height: 0; }
+  .archive-window ol { flex: 0 0 auto; margin: .75rem 0 0; min-height: auto; }
   .archive-window__primary {
-    position: sticky;
-    bottom: 0;
+    position: static;
+    flex: 0 0 auto;
     width: 100%;
-    margin-top: auto;
+    margin-top: 1rem;
     padding: .85rem 1.25rem calc(.85rem + env(safe-area-inset-bottom));
     color: var(--background);
     background: var(--ink);

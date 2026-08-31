@@ -1,5 +1,26 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function swipeTouch(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+) {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
+  for (let step = 1; step <= 4; step += 1) {
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{
+        x: from.x + (to.x - from.x) * step / 4,
+        y: from.y + (to.y - from.y) * step / 4,
+      }],
+    });
+    await page.waitForTimeout(35);
+  }
+  await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await session.detach();
+}
 
 test.describe('James Nguyen portfolio world', () => {
   test('renders immediate navigation and initializes the enhanced world', async ({ page }) => {
@@ -439,6 +460,90 @@ test('mobile projected labels stay above the archive sheet and restore when it c
     const bounds = element.getBoundingClientRect();
     return bounds.bottom;
   })))).toBeGreaterThan(sheetTop + 1);
+});
+
+test('short mobile viewport keeps the site header visible when an archive opens', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-360', 'The short visual viewport regression is mobile-specific.');
+
+  await page.setViewportSize({ width: 360, height: 600 });
+  await page.goto('/');
+  await expect(page.locator('.world-viewport canvas')).toBeVisible({ timeout: 4_000 });
+  await page.locator('.world-zone-labels li[data-zone="projects"] a').click();
+  await expect(page.locator('.world-explorer')).toHaveAttribute('data-phase', 'zone-open', { timeout: 8_000 });
+
+  const layout = await page.evaluate(() => {
+    const header = document.querySelector<HTMLElement>('.site-header')!.getBoundingClientRect();
+    const archive = document.querySelector<HTMLElement>('.archive-window')!.getBoundingClientRect();
+    return {
+      scrollY: window.scrollY,
+      headerTop: header.top,
+      archiveBottom: archive.bottom,
+      viewportHeight: window.innerHeight,
+    };
+  });
+
+  expect(layout.scrollY).toBe(0);
+  expect(layout.headerTop).toBeGreaterThanOrEqual(0);
+  expect(layout.archiveBottom).toBeLessThanOrEqual(layout.viewportHeight + 1);
+});
+
+test('mobile touch keeps horizontal orbit and releases vertical page panning', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-360', 'Touch-axis ownership is mobile-specific.');
+
+  await page.setViewportSize({ width: 360, height: 600 });
+  await page.goto('/');
+  const canvas = page.locator('.world-viewport canvas');
+  const world = page.locator('.world-explorer');
+  await expect(canvas).toBeVisible({ timeout: 4_000 });
+
+  const touchAction = await canvas.evaluate((element) => getComputedStyle(element).touchAction);
+  expect(touchAction).toBe('pan-y');
+
+  const beforeHorizontal = Number(await world.getAttribute('data-angle'));
+  await swipeTouch(page, { x: 20, y: 160 }, { x: 140, y: 160 });
+  await expect.poll(async () => Number(await world.getAttribute('data-angle'))).not.toBe(beforeHorizontal);
+
+  await page.evaluate(() => window.scrollTo(0, 80));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(80);
+  const beforeVertical = Number(await world.getAttribute('data-angle'));
+  await swipeTouch(page, { x: 20, y: 160 }, { x: 20, y: 320 });
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(40);
+  await expect.poll(async () => Number(await world.getAttribute('data-angle'))).toBeCloseTo(beforeVertical, 4);
+});
+
+test('mobile archive route action follows every entry without overlap', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-360', 'The bottom-sheet flow is mobile-specific.');
+
+  await page.setViewportSize({ width: 360, height: 600 });
+  await page.goto('/?zone=projects');
+  const content = page.locator('.archive-window__content');
+  await expect(content).toBeVisible();
+
+  const measurements = [];
+  for (const fraction of [0, 0.5, 1]) {
+    measurements.push(await content.evaluate((element, scrollFraction) => {
+      const scrollport = element as HTMLElement;
+      scrollport.scrollTop = (scrollport.scrollHeight - scrollport.clientHeight) * scrollFraction;
+      const action = scrollport.querySelector<HTMLElement>('.archive-window__primary')!.getBoundingClientRect();
+      const entries = [...scrollport.querySelectorAll<HTMLElement>('.archive-window__entries li')]
+        .map((entry) => entry.getBoundingClientRect());
+      const navigation = document.querySelector<HTMLElement>('.site-header nav')!.getBoundingClientRect();
+      return {
+        overlap: Math.max(0, ...entries.map((entry) => (
+          Math.min(entry.bottom, action.bottom) - Math.max(entry.top, action.top)
+        ))),
+        lastEntryBottom: entries.at(-1)!.bottom,
+        actionTop: action.top,
+        actionBottom: action.bottom,
+        navigationTop: navigation.top,
+      };
+    }, fraction));
+  }
+
+  for (const measurement of measurements) expect(measurement.overlap).toBeLessThanOrEqual(0);
+  const final = measurements.at(-1)!;
+  expect(final.lastEntryBottom).toBeLessThanOrEqual(final.actionTop);
+  expect(final.actionBottom).toBeLessThanOrEqual(final.navigationTop);
 });
 
 test('flagship projects present structured, captioned evidence while legacy projects remain compatible', async ({ page }, testInfo) => {
