@@ -5,7 +5,7 @@ import { WorldExplorer } from '../components/world/WorldExplorer';
 import type { ZoneData } from '../components/world/world-content';
 import { WORLD_MAP } from '../components/world/world-map';
 import { validateWorld } from '../components/world/world-validator';
-import { BLOGS_EMPTY_MESSAGE, INTERESTS_EMPTY_MESSAGE, site } from '../config/site';
+import { BLOGS_EMPTY_MESSAGE, INTERESTS_EMPTY_MESSAGE, ABOUT_SUMMARY, site } from '../config/site';
 
 const [employment, writing, projects, interests] = await Promise.all([
   getCollection('employment'),
@@ -51,7 +51,7 @@ const zones: ZoneData[] = [
   },
   {
     id: 'about', label: 'About', href: '/about',
-    summary: 'The person, interests, and working principles maintaining this place.',
+    summary: ABOUT_SUMMARY,
     entries: [],
   },
 ];

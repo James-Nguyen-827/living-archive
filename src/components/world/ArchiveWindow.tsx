@@ -63,6 +63,7 @@ export function ArchiveWindow({ content, phase, zones, onClose, onSelectZone, on
         {content.kind === 'zone' && zone && (
           <>
             <h2 id="archive-window-title">{zone.label}</h2>
+            <p className="archive-window__summary">{zone.summary}</p>
             {zone.entries.length > 0 && (
               <ol className="archive-window__entries">
                 {zone.entries.map((item) => (

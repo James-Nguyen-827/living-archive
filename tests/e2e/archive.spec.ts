@@ -119,6 +119,16 @@ test.describe('James Nguyen portfolio world', () => {
     )).toBeVisible();
   });
 
+  test('the About archive shows its summary', async ({ page }) => {
+    await page.goto('/?zone=about');
+
+    await expect(page.locator('.archive-window')).toHaveAttribute('data-content', 'zone');
+    await expect(page.getByRole('heading', { name: 'About', exact: true })).toBeVisible();
+    await expect(page.locator('.archive-window__entries li')).toHaveCount(0);
+    await expect(page.locator('.archive-window__summary')).toContainText('likes building things');
+    await expect(page.locator('.archive-window__summary')).toContainText('something you can actually explore.');
+  });
+
   test('draft Interests remain private across routes, indexes, and the world archive', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-1440', 'Draft filtering is viewport-independent.');
 
