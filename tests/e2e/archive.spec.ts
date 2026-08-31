@@ -216,6 +216,19 @@ test.describe('James Nguyen portfolio world', () => {
     await expect.poll(async () => Number(await world.getAttribute('data-angle'))).toBeCloseTo(beforeNudge + Math.PI / 8, 4);
   });
 
+  test('clicking a 3D island opens its archive', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('.world-viewport canvas')).toBeVisible({ timeout: 4_000 });
+    const employmentLabel = page.locator('.world-zone-labels li[data-zone="employment"]');
+    await expect(employmentLabel).toHaveAttribute('data-projected', 'true', { timeout: 4_000 });
+    const labelBox = await employmentLabel.boundingBox();
+    if (!labelBox) throw new Error('Employment label bounds unavailable.');
+    // Labels anchor above each island; the sculpture sits below the pill.
+    await page.mouse.click(labelBox.x + labelBox.width / 2, labelBox.y + labelBox.height + 52);
+    await expect(page.locator('.world-explorer')).toHaveAttribute('data-selected-zone', 'employment', { timeout: 8_000 });
+    await expect(page.getByRole('heading', { name: 'Employment' })).toBeVisible();
+  });
+
   test('mid-route selection cancels the old journey and every zone remains directly restorable', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('.world-viewport canvas')).toBeVisible({ timeout: 4_000 });

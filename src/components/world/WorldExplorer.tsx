@@ -55,6 +55,8 @@ function zoneFromUrl(): ZoneId | null {
   return value && Object.prototype.hasOwnProperty.call(ZONE_NODES, value) ? value as ZoneId : null;
 }
 
+const ORBIT_DRAG_THRESHOLD_PX = 6;
+
 export function WorldExplorer({ zones }: Props) {
   const [state, dispatch] = useReducer(worldReducer, createInitialWorldState(WORLD_MAP.spawnNodeId));
   const [mounted, setMounted] = useState(false);
@@ -72,7 +74,13 @@ export function WorldExplorer({ zones }: Props) {
   const historyDepth = useRef(0);
   const zoneHistoryOnArrival = useRef<'push' | 'replace' | false>(false);
   const journeyStepMs = useRef(140);
-  const drag = useRef<{ pointerId: number; startX: number; startAngle: number } | null>(null);
+  const drag = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startAngle: number;
+    active: boolean;
+  } | null>(null);
 
   const staticMode = mounted && Boolean(fallback);
 
@@ -300,20 +308,34 @@ export function WorldExplorer({ zones }: Props) {
 
   function handlePointerDown(event: PointerEvent<HTMLElement>) {
     if (isInteractiveTarget(event.target)) return;
-    drag.current = { pointerId: event.pointerId, startX: event.clientX, startAngle: rotationAngle };
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    drag.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startAngle: rotationAngle,
+      active: false,
+    };
     worldRef.current?.focus();
   }
 
   function handlePointerMove(event: PointerEvent<HTMLElement>) {
     if (!drag.current || drag.current.pointerId !== event.pointerId) return;
+    const dx = event.clientX - drag.current.startX;
+    const dy = event.clientY - drag.current.startY;
+    if (!drag.current.active) {
+      if (Math.hypot(dx, dy) < ORBIT_DRAG_THRESHOLD_PX) return;
+      drag.current.active = true;
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    }
     setRotationAngle(angleFromDrag(drag.current.startAngle, drag.current.startX, event.clientX));
   }
 
   function handlePointerUp(event: PointerEvent<HTMLElement>) {
     if (drag.current?.pointerId === event.pointerId) {
+      if (drag.current.active && event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
       drag.current = null;
-      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     }
   }
 
@@ -361,7 +383,10 @@ export function WorldExplorer({ zones }: Props) {
                 selectedZone={state.selectedZone}
                 reactionSequence={reactionSequence}
                 reducedMotion={reducedMotion}
-                onZoneRequest={requestZone}
+                onZoneRequest={(zone) => requestZone(
+                  zone,
+                  labelRefs.current.get(zone)?.querySelector('a') ?? worldRef.current,
+                )}
                 onLabelsProject={projectLabels}
                 onReady={() => setCanvasReady(true)}
               />

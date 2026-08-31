@@ -167,9 +167,15 @@ function PlatformBody({
   onPointerOut?: () => void;
 }) {
   const { mossHeight, mossCenterY, shaftHeight, shaftCenterY, capWidth, capDepth } = platformShaftLayout(module);
+  const pointerProps = interactive ? {
+    onPointerDown: (event: { stopPropagation: () => void }) => { event.stopPropagation(); },
+    onPointerOver: (event: { stopPropagation: () => void }) => { event.stopPropagation(); onPointerOver?.(); },
+    onPointerOut: () => onPointerOut?.(),
+    onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation(); onSelect?.(); },
+  } : {};
   return (
     <>
-      <mesh position={[0, shaftCenterY, 0]} receiveShadow>
+      <mesh position={[0, shaftCenterY, 0]} receiveShadow {...pointerProps}>
         <boxGeometry args={[capWidth, shaftHeight, capDepth]} />
         <AnimatedLambert tone="dirt" theme={theme} />
       </mesh>
@@ -177,9 +183,7 @@ function PlatformBody({
         position={[0, mossCenterY, 0]}
         castShadow
         receiveShadow
-        onPointerOver={interactive ? (event) => { event.stopPropagation(); onPointerOver?.(); } : undefined}
-        onPointerOut={interactive ? () => onPointerOut?.() : undefined}
-        onClick={interactive ? (event) => { event.stopPropagation(); onSelect?.(); } : undefined}
+        {...pointerProps}
       >
         <boxGeometry args={[capWidth, mossHeight, capDepth]} />
         {mossRef
@@ -430,16 +434,16 @@ function StaticBox({ module, tone, theme }: { module: WorldModule; tone: Palette
   );
 }
 
-function ZonePlatform({ module, zone, theme, selected, reducedMotion, reactionSequence, onSelect }: {
-  module: WorldModule; zone: ZoneId; theme: Props['theme']; selected: boolean; reducedMotion: boolean;
-  reactionSequence: number; onSelect: () => void;
+function ZonePlatform({ module, zone, theme, selected, highlighted, reducedMotion, reactionSequence, onSelect, onPointerOver, onPointerOut }: {
+  module: WorldModule; zone: ZoneId; theme: Props['theme']; selected: boolean; highlighted: boolean;
+  reducedMotion: boolean; reactionSequence: number; onSelect: () => void;
+  onPointerOver: () => void; onPointerOut: () => void;
 }) {
   const group = useRef<Group>(null);
   const moss = useRef<MeshLambertMaterial>(null);
-  const [hovered, setHovered] = useState(false);
   useFrame((_state, delta) => {
     if (!group.current || !moss.current) return;
-    const active = hovered || selected;
+    const active = highlighted || selected;
     const lift = active && !reducedMotion ? 0.04 : 0;
     group.current.position.y = MathUtils.damp(group.current.position.y, module.transform.position[1] + lift, 18, delta);
     const palette = theme === 'night' ? NIGHT : DAY;
@@ -454,8 +458,8 @@ function ZonePlatform({ module, zone, theme, selected, reducedMotion, reactionSe
         mossRef={moss}
         interactive
         onSelect={onSelect}
-        onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
-        onPointerOut={() => { setHovered(false); document.body.style.cursor = ''; }}
+        onPointerOver={() => { onPointerOver(); document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { onPointerOut(); document.body.style.cursor = ''; }}
       />
       {zone === 'projects' && [-0.7, 0, 0.7].map((x, index) => (
         <ReactionBlock key={x} x={x} index={index} active={selected} sequence={reactionSequence} reducedMotion={reducedMotion} theme={theme} />
@@ -779,8 +783,9 @@ function carouselHorseParts(angle: number, tone: CarouselTone): CarouselPart[] {
   }));
 }
 
-function HobbiesCarousel({ active, sequence, theme, reducedMotion, onSelect }: {
+function HobbiesCarousel({ active, sequence, theme, reducedMotion, onSelect, onPointerOver, onPointerOut }: {
   active: boolean; sequence: number; theme: Props['theme']; reducedMotion: boolean; onSelect: () => void;
+  onPointerOver: () => void; onPointerOut: () => void;
 }) {
   const rotor = useRef<Group>(null);
   const bulbs = useRef<Mesh>(null);
@@ -839,12 +844,13 @@ function HobbiesCarousel({ active, sequence, theme, reducedMotion, onSelect }: {
     <group
       position={HOBBIES_CAROUSEL_POSITION}
       scale={HOBBIES_CAROUSEL_SCALE}
+      onPointerDown={(event) => { event.stopPropagation(); }}
       onClick={(event) => {
         event.stopPropagation();
         onSelect();
       }}
-      onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
-      onPointerOut={() => { document.body.style.cursor = ''; }}
+      onPointerOver={() => { document.body.style.cursor = 'pointer'; onPointerOver(); }}
+      onPointerOut={() => { document.body.style.cursor = ''; onPointerOut(); }}
     >
       <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.58, 0.58, 0.1, 10]} />
@@ -1030,7 +1036,16 @@ export function WorldScene(props: Props) {
   const dusk = useRef(props.theme === 'night' ? 1 : 0);
   const { gl, invalidate } = useThree();
   const motionUntil = useRef(0);
+  const [hoveredZone, setHoveredZone] = useState<ZoneId | null>(null);
   const activeZone = props.phase === 'arriving' || props.phase === 'opening-window' ? props.targetZone ?? props.selectedZone : props.selectedZone;
+
+  const zonePointerOver = (zone: ZoneId) => () => {
+    setHoveredZone(zone);
+  };
+  const zonePointerOut = (zone: ZoneId) => () => {
+    setHoveredZone((current) => (current === zone ? null : current));
+  };
+
   useEffect(() => {
     gl.setClearColor(props.theme === 'night' ? NIGHT.sky : DAY.sky, 0);
     motionUntil.current = props.reducedMotion ? 0 : performance.now() + 950;
@@ -1047,6 +1062,9 @@ export function WorldScene(props: Props) {
     'employment-platform': 'employment', 'writing-platform': 'writing', 'projects-platform': 'projects',
     'interests-platform': 'interests', 'about-platform': 'about',
   };
+  const zoneByTower: Partial<Record<string, ZoneId>> = {
+    'employment-tower': 'employment', 'writing-tower': 'writing', 'projects-tower': 'projects', 'about-tower': 'about',
+  };
 
   return (
     <>
@@ -1059,22 +1077,37 @@ export function WorldScene(props: Props) {
         <HabitatSea theme={props.theme} reducedMotion={props.reducedMotion} />
         {WORLD_MAP.modules.map((module) => {
           const zone = zoneByPlatform[module.id];
-          if (zone) return <ZonePlatform key={module.id} module={module} zone={zone} theme={props.theme} selected={activeZone === zone} reducedMotion={props.reducedMotion} reactionSequence={props.reactionSequence} onSelect={() => props.onZoneRequest(zone)} />;
+          if (zone) {
+            return (
+              <ZonePlatform
+                key={module.id}
+                module={module}
+                zone={zone}
+                theme={props.theme}
+                selected={activeZone === zone}
+                highlighted={hoveredZone === zone}
+                reducedMotion={props.reducedMotion}
+                reactionSequence={props.reactionSequence}
+                onSelect={() => props.onZoneRequest(zone)}
+                onPointerOver={zonePointerOver(zone)}
+                onPointerOut={zonePointerOut(zone)}
+              />
+            );
+          }
           if (module.kind === 'stair') return <StairModule key={module.id} module={module} theme={props.theme} />;
           if (module.kind === 'tower') {
+            const towerZone = zoneByTower[module.id];
             return (
               <TowerModule
                 key={module.id}
                 module={module}
                 theme={props.theme}
-                active={
-                  (module.id === 'employment-tower' && activeZone === 'employment')
-                  || (module.id === 'writing-tower' && activeZone === 'writing')
-                  || (module.id === 'projects-tower' && activeZone === 'projects')
-                  || (module.id === 'about-tower' && activeZone === 'about')
-                }
+                active={towerZone ? activeZone === towerZone : false}
                 reducedMotion={props.reducedMotion}
                 reactionSequence={props.reactionSequence}
+                onSelect={towerZone ? () => props.onZoneRequest(towerZone) : undefined}
+                onPointerOver={towerZone ? zonePointerOver(towerZone) : undefined}
+                onPointerOut={towerZone ? zonePointerOut(towerZone) : undefined}
               />
             );
           }
@@ -1096,6 +1129,8 @@ export function WorldScene(props: Props) {
           theme={props.theme}
           reducedMotion={props.reducedMotion}
           onSelect={() => props.onZoneRequest('interests')}
+          onPointerOver={zonePointerOver('interests')}
+          onPointerOut={zonePointerOut('interests')}
         />
         <Vegetation theme={props.theme} reducedMotion={props.reducedMotion} />
         <RuinAccents theme={props.theme} />

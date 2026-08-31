@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { type ThreeEvent, useFrame, useThree } from '@react-three/fiber';
 import {
   Color,
   Group,
@@ -56,13 +56,39 @@ import {
 } from './world-motion';
 import { moduleYaw, type WorldModule } from './world-types';
 
-type TowerProps = {
+type TowerInteractionProps = {
+  onSelect?: () => void;
+  onPointerOver?: () => void;
+  onPointerOut?: () => void;
+};
+
+type TowerProps = TowerInteractionProps & {
   module: WorldModule;
   theme: WorldTheme;
   active: boolean;
   reducedMotion: boolean;
   reactionSequence: number;
 };
+
+function towerPointerHandlers({ onSelect, onPointerOver, onPointerOut }: TowerInteractionProps) {
+  if (!onSelect) return {};
+  return {
+    onPointerDown: (event: ThreeEvent<PointerEvent>) => { event.stopPropagation(); },
+    onPointerOver: (event: ThreeEvent<PointerEvent>) => {
+      event.stopPropagation();
+      document.body.style.cursor = 'pointer';
+      onPointerOver?.();
+    },
+    onPointerOut: () => {
+      document.body.style.cursor = '';
+      onPointerOut?.();
+    },
+    onClick: (event: ThreeEvent<MouseEvent>) => {
+      event.stopPropagation();
+      onSelect();
+    },
+  };
+}
 
 function useTowerReaction(
   active: boolean,
@@ -194,7 +220,14 @@ function TowerWindows({
   );
 }
 
-function TowerPlacement({ module, children }: { module: WorldModule; children: ReactNode }) {
+function TowerPlacement({
+  module,
+  onSelect,
+  onPointerOver,
+  onPointerOut,
+  children,
+}: { module: WorldModule; children: ReactNode } & TowerInteractionProps) {
+  const handlers = towerPointerHandlers({ onSelect, onPointerOver, onPointerOut });
   return (
     <group
       position={[
@@ -203,6 +236,7 @@ function TowerPlacement({ module, children }: { module: WorldModule; children: R
         module.transform.position[2],
       ]}
       rotation={[0, moduleYaw(module.transform), 0]}
+      {...handlers}
     >
       {children}
     </group>
@@ -215,7 +249,9 @@ function assembly(design: ReturnType<typeof towerDesign>, key: string): TowerAss
   return value;
 }
 
-function ProjectCourtTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
+function ProjectCourtTower({
+  module, theme, active, reducedMotion, reactionSequence, onSelect, onPointerOver, onPointerOut,
+}: TowerProps) {
   const height = module.size[1];
   const design = useMemo(() => towerDesign('project-court', height), [height]);
   const reaction = useTowerReaction(
@@ -263,7 +299,7 @@ function ProjectCourtTower({ module, theme, active, reducedMotion, reactionSeque
   });
 
   return (
-    <TowerPlacement module={module}>
+    <TowerPlacement module={module} onSelect={onSelect} onPointerOver={onPointerOver} onPointerOut={onPointerOut}>
       <MergedParts parts={design.staticParts} theme={theme} reducedMotion={reducedMotion} />
       <group
         ref={rearSlab}
@@ -288,7 +324,9 @@ function ProjectCourtTower({ module, theme, active, reducedMotion, reactionSeque
   );
 }
 
-function IndexEngineTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
+function IndexEngineTower({
+  module, theme, active, reducedMotion, reactionSequence, onSelect, onPointerOver, onPointerOut,
+}: TowerProps) {
   const height = module.size[1];
   const design = useMemo(() => towerDesign('index-engine', height), [height]);
   const reaction = useTowerReaction(
@@ -366,7 +404,7 @@ function IndexEngineTower({ module, theme, active, reducedMotion, reactionSequen
   });
 
   return (
-    <TowerPlacement module={module}>
+    <TowerPlacement module={module} onSelect={onSelect} onPointerOver={onPointerOver} onPointerOut={onPointerOut}>
       <MergedParts parts={design.staticParts} theme={theme} reducedMotion={reducedMotion} />
       <instancedMesh
         name="index-engine-chambers"
@@ -396,7 +434,9 @@ function IndexEngineTower({ module, theme, active, reducedMotion, reactionSequen
   );
 }
 
-function ParadoxGateTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
+function ParadoxGateTower({
+  module, theme, active, reducedMotion, reactionSequence, onSelect, onPointerOver, onPointerOut,
+}: TowerProps) {
   const height = module.size[1];
   const design = useMemo(() => towerDesign('paradox-gate', height), [height]);
   const reaction = useTowerReaction(active, reactionSequence, reducedMotion);
@@ -446,7 +486,7 @@ function ParadoxGateTower({ module, theme, active, reducedMotion, reactionSequen
   });
 
   return (
-    <TowerPlacement module={module}>
+    <TowerPlacement module={module} onSelect={onSelect} onPointerOver={onPointerOver} onPointerOut={onPointerOut}>
       <MergedParts parts={design.staticParts} theme={theme} reducedMotion={reducedMotion} />
       <instancedMesh
         ref={frames}
@@ -465,7 +505,9 @@ function ParadoxGateTower({ module, theme, active, reducedMotion, reactionSequen
   );
 }
 
-function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
+function OrreryBeaconTower({
+  module, theme, active, reducedMotion, reactionSequence, onSelect, onPointerOver, onPointerOut,
+}: TowerProps) {
   const height = module.size[1];
   const design = useMemo(() => towerDesign('orrery', height), [height]);
   const reaction = useTowerReaction(active, reactionSequence, reducedMotion);
@@ -508,7 +550,7 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
   });
 
   return (
-    <TowerPlacement module={module}>
+    <TowerPlacement module={module} onSelect={onSelect} onPointerOver={onPointerOver} onPointerOut={onPointerOut}>
       <MergedParts parts={design.staticParts} theme={theme} reducedMotion={reducedMotion} beaconTones={['coral']} />
       <group position={ringAssemblies[0]!.position}>
         {ringAssemblies.map((_ring, index) => (
@@ -538,12 +580,15 @@ function OrreryBeaconTower({ module, theme, active, reducedMotion, reactionSeque
   );
 }
 
-export function TowerModule({ module, theme, active, reducedMotion, reactionSequence }: TowerProps) {
+export function TowerModule({
+  module, theme, active, reducedMotion, reactionSequence, onSelect, onPointerOver, onPointerOut,
+}: TowerProps) {
   const archetype = towerArchetypeFromModuleId(module.id);
+  const shared = { module, theme, active, reducedMotion, reactionSequence, onSelect, onPointerOver, onPointerOut };
   switch (archetype) {
-    case 'project-court': return <ProjectCourtTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
-    case 'index-engine': return <IndexEngineTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
-    case 'paradox-gate': return <ParadoxGateTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
-    case 'orrery': return <OrreryBeaconTower module={module} theme={theme} active={active} reducedMotion={reducedMotion} reactionSequence={reactionSequence} />;
+    case 'project-court': return <ProjectCourtTower {...shared} />;
+    case 'index-engine': return <IndexEngineTower {...shared} />;
+    case 'paradox-gate': return <ParadoxGateTower {...shared} />;
+    case 'orrery': return <OrreryBeaconTower {...shared} />;
   }
 }
