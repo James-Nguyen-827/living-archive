@@ -12,6 +12,6 @@ const { Content } = await render(entry);
 const date = new Intl.DateTimeFormat('en', { dateStyle: 'long' }).format(entry.data.publishDate);
 ---
 
-<EntryLayout title={entry.data.title} summary={entry.data.summary} meta={`${date} / ${entry.data.tags.join(' · ')}`} image="/og/writing.png" section="writing">
+<EntryLayout title={entry.data.title} summary={entry.data.summary} meta={`${date} / ${entry.data.tags.join(' · ')}`} section="writing">
   <Content />
 </EntryLayout>

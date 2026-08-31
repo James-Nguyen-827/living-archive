@@ -72,7 +72,8 @@ describe('public site identity', () => {
     const publicHtml = readFileSync(builtIndex, 'utf8');
     expect(publicHtml).toContain('<link rel="canonical" href="https://james-nguyen.dev/">');
     expect(publicHtml).toContain('<meta property="og:url" content="https://james-nguyen.dev/">');
-    expect(publicHtml).toContain('<meta property="og:image" content="https://james-nguyen.dev/og/default.png">');
+    expect(publicHtml).not.toContain('property="og:image"');
+    expect(publicHtml).toContain('<meta name="twitter:card" content="summary">');
     expect(publicHtml).toContain('"url":"https://james-nguyen.dev"');
     expect(readFileSync(resolve(projectRoot, 'dist', 'rss.xml'), 'utf8')).toContain('https://james-nguyen.dev/');
     expect(readFileSync(resolve(projectRoot, 'dist', 'sitemap-index.xml'), 'utf8')).toContain('https://james-nguyen.dev/');

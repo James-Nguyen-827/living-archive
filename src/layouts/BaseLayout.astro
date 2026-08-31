@@ -12,19 +12,16 @@ import { THEME_COLORS, THEME_STORAGE_KEY } from '../config/theme';
 interface Props {
   title?: string;
   description?: string;
-  image?: string;
   kind?: 'website' | 'article';
 }
 
 const {
   title = site.name,
   description = site.description,
-  image = '/og/default.png',
   kind = 'website',
 } = Astro.props;
 const pageTitle = title === site.name ? title : `${title} — ${site.name}`;
 const canonical = site.url ? new URL(Astro.url.pathname, site.url) : null;
-const imageUrl = site.url ? new URL(image, site.url) : null;
 ---
 
 <!doctype html>
@@ -41,17 +38,7 @@ const imageUrl = site.url ? new URL(image, site.url) : null;
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     {canonical && <meta property="og:url" content={canonical} />}
-    {imageUrl && (
-      <>
-        <meta property="og:image" content={imageUrl} />
-        <meta property="og:image:type" content="image/png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content={`${pageTitle} social preview`} />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image:alt" content={`${pageTitle} social preview`} />
-      </>
-    )}
+    <meta name="twitter:card" content="summary" />
     <title>{pageTitle}</title>
     <script is:inline define:vars={{ themeColors: THEME_COLORS, themeStorageKey: THEME_STORAGE_KEY }}>
       (() => {

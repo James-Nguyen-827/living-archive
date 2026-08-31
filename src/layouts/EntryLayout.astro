@@ -7,14 +7,13 @@ interface Props {
   summary: string;
   meta: string;
   kind?: 'website' | 'article';
-  image?: string;
   section: SectionKind;
 }
 
-const { title, summary, meta, section, kind = 'article', image = '/og/archive.png' } = Astro.props;
+const { title, summary, meta, section, kind = 'article' } = Astro.props;
 ---
 
-<BaseLayout title={title} description={summary} kind={kind} image={image}>
+<BaseLayout title={title} description={summary} kind={kind}>
   <article class="article-shell">
     <header class="article-head">
       <div class="article-head__copy">
