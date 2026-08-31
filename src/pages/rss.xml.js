@@ -3,21 +3,20 @@ import { getCollection } from 'astro:content';
 import { site } from '../config/site';
 
 export async function GET(context) {
-  const notes = (await getCollection('notes')).sort(
+  const posts = (await getCollection('writing')).sort(
     (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf(),
   );
 
   return rss({
-    title: `${site.name} — Field Notes`,
-    description: 'Observations on design, architecture, interfaces, and the practice around them.',
-    site: context.site,
-    items: notes.map((note) => ({
-      title: note.data.title,
-      description: note.data.summary,
-      pubDate: note.data.publishDate,
-      link: `/notes/${note.id}`,
-      categories: note.data.tags,
+    title: `${site.name} — Blogs`,
+    description: 'Notes, experiments, and observations from work in progress.',
+    site: context.site ?? context.url.origin,
+    items: posts.map((post) => ({
+      title: post.data.title,
+      description: post.data.summary,
+      pubDate: post.data.publishDate,
+      link: `/writing/${post.id}`,
+      categories: post.data.tags,
     })),
   });
 }
-

@@ -13,14 +13,15 @@ export interface ZoneData {
   id: ZoneId;
   label: string;
   summary: string;
+  emptyMessage?: string;
   href: string;
   entries: readonly ZoneEntry[];
 }
 
 export const ZONE_LABELS: Record<ZoneId, string> = {
-  work: 'Work',
-  'field-notes': 'Field Notes',
-  experiments: 'Experiments',
-  hobbies: 'Hobbies',
+  employment: 'Employment',
+  writing: 'Blogs',
+  projects: 'Projects',
+  interests: 'Interests',
   about: 'About',
 };

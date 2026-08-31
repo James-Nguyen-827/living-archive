@@ -1,15 +1,19 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import PageIntro from '../components/PageIntro.astro';
 ---
 
-<BaseLayout title="Not found" description="That path does not exist in the Living Archive.">
-  <section class="page-intro page-shell">
-    <h1>Not found</h1>
-    <p class="page-404-links"><a href="/index">Index</a> · <a href="/">World</a></p>
-  </section>
+<BaseLayout title="Route not found" description="The traveler cannot reach this coordinate.">
+  <PageIntro section="utility" title="Route not found">
+    <p class="page-404-copy">The traveler cannot reach this coordinate. Return to the <a href="/">World</a> or open the complete <a href="/index">Index</a>.</p>
+  </PageIntro>
 </BaseLayout>
 
 <style>
-  .page-404-links { margin: 1rem 0 0; color: var(--muted-ink); }
-  .page-404-links a { text-decoration: none; }
+  .page-404-copy {
+    max-width: var(--measure);
+    margin: 1rem 0 0;
+    color: var(--muted-ink);
+    font-size: clamp(1.05rem, 1rem + 0.35vw, 1.25rem);
+  }
 </style>

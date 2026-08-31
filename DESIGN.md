@@ -23,6 +23,8 @@ Barlow Condensed 600 for display and navigation. Atkinson Hyperlegible Next 400,
 
 Fluid page gutters use `clamp(1rem, 3vw, 3.5rem)`. The world is the desktop focal point; projected labels, navigation, and architectural windows remain accessible DOM outside the canvas. Desktop windows clip in from the right while leaving the world visible. Mobile uses a bottom sheet that preserves the selected island above it.
 
+Conventional routes stay in fast, editorial Read mode. Each page intro and entry header carries one restrained, noninteractive section mark derived from its world landmark: court and gantry for Employment, stepped chambers for Writing, nested gate for Projects, carousel plan for Interests, orrery rings for About, and an isolated landing pad for utility routes. Project case studies use ruled overview rows, semantic evidence figures, code-native flow diagrams, and a single next-project handoff instead of a card grid.
+
 ## Motion
 
 Pointer drag directly sets a continuous orbit target; Q/E and visible controls nudge by 22.5°. Immediate reactions use 140–180ms, entry morphs and closing use 420ms, camera reframing uses 900ms ease-in-out, window opening uses 620ms, and miniature dusk uses 900ms—all with ease-out-quint except camera return/approach which uses ease-in-out-cubic. Reduced motion makes travel, environmental reactions, reframing, and window changes immediate while preserving their final states.
@@ -41,9 +43,9 @@ The four zone towers are narrative “impossible mechanisms”: a shared Monumen
 
 | Landmark | Zone | Silhouette | Arrival and held pose | Neutral ambient life |
 | --- | --- | --- | --- | --- |
-| Project Court (`work-tower`) | Work | Two unequal L-shaped wings frame an open diagonal courtyard | Front terrace unfolds first; at 0.48s the rear terrace and coral gantry rise, travel, extend, and seat together across the court | Gantry hovers and wobbles in its rear cradle; held pose adds seated beam tension and terrace micro-settle |
-| Index Engine (`notes-tower`) | Field Notes | Stepped base, offset spine, warm-lit core, exterior guide rail, four keyed chambers, and two crown halves | Chambers unlock upward while the coral cap stays seated, then drifts up slowly with a lazy summit spin as the crown opens | Coral carriage floats subtly at the neutral crown |
-| Paradox Gate (`experiments-tower`) | Experiments | Wide twin-pier portal with dark nested frames | Frames resolve into a 0°/45°/90° aperture and hold the coral cube | Nested frames counter-spin; cube hovers and turns |
+| Project Court (`employment-tower`) | Employment | Two unequal L-shaped wings frame an open diagonal courtyard | Front terrace unfolds first; at 0.48s the rear terrace and coral gantry rise, travel, extend, and seat together across the court | Gantry hovers and wobbles in its rear cradle; held pose adds seated beam tension and terrace micro-settle |
+| Index Engine (`writing-tower`) | Writing | Stepped base, offset spine, warm-lit core, exterior guide rail, four keyed chambers, and two crown halves | Chambers unlock upward while the coral cap stays seated, then drifts up slowly with a lazy summit spin as the crown opens | Coral carriage floats subtly at the neutral crown |
+| Paradox Gate (`projects-tower`) | Projects | Wide twin-pier portal with dark nested frames | Frames resolve into a 0°/45°/90° aperture and hold the coral cube | Nested frames counter-spin; cube hovers and turns |
 | Orrery Beacon (`about-tower`) | About | Slender offset beacon with a large segmented halo | Three rings align and hold a warm inward-facing beam | Rings counter-rotate slowly |
 
 Tower arrivals run forward for 1.05 seconds and reverse for 0.65 seconds, except Project Court and the Index Engine, which use 1.4s arrivals and 0.8s exits for their longer ceremonies. Reselecting an active zone replays its performance; reduced motion snaps directly to the held pose. Ambient loops fade out as the active pose resolves, while the shared 50ms demand tick continues to serve neutral life. Layouts, window transforms, instancing groups, envelopes, and per-archetype budget estimates live in `tower-designs.ts`; pure reversible poses live in `world-motion.ts`; R3F assemblies live in `tower-modules.tsx`.

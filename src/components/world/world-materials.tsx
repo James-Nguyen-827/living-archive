@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Color, MathUtils, MeshLambertMaterial } from 'three';
+import type { PortfolioTheme } from '../../config/theme';
 import { coralBeaconGlow, themeTransitionProgress } from './world-motion';
 
 export const DAY = {
@@ -38,7 +39,7 @@ export const LANDING_PAD_TILE_NIGHT_COLOR = TOWER_WINDOW_NIGHT_COLOR;
 export const LANDING_PAD_FRAME_EMISSIVE_INTENSITY = 2.5;
 export const DECOR_GROUND_SNAP = 0.25;
 
-export type WorldTheme = 'day' | 'night';
+export type WorldTheme = PortfolioTheme;
 export type PaletteKey = keyof typeof DAY;
 export type Tone = PaletteKey | { day: string; night: string };
 

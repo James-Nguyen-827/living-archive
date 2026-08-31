@@ -10,10 +10,10 @@ import {
 
 const PLATFORM_FOR_PLANT = [
   'central-platform', 'central-platform', 'central-platform',
-  'work-platform', 'work-platform',
-  'notes-platform', 'notes-platform',
-  'experiments-platform', 'experiments-platform',
-  'hobbies-platform', 'hobbies-platform',
+  'employment-platform', 'employment-platform',
+  'writing-platform', 'writing-platform',
+  'projects-platform', 'projects-platform',
+  'interests-platform', 'interests-platform',
   'about-platform', 'about-platform',
 ] as const;
 

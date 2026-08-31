@@ -3,8 +3,8 @@ import { WORLD_MAP } from './world-map';
 import { getStairSteps } from './stair-geometry';
 
 describe('getStairSteps', () => {
-  it('joins the notes stair from the lower platform top to the raised bridge top', () => {
-    const stair = WORLD_MAP.modules.find((module) => module.id === 'notes-stair')!;
+  it('joins the writing stair from the lower platform top to the raised bridge top', () => {
+    const stair = WORLD_MAP.modules.find((module) => module.id === 'writing-stair')!;
     const steps = getStairSteps(stair, WORLD_MAP.nodes);
 
     expect(steps).toHaveLength(4);
@@ -20,8 +20,8 @@ describe('getStairSteps', () => {
     expect(steps[3].top).toBe(1.25);
   });
 
-  it('keeps lowered work and hobbies stairs above the low endpoint', () => {
-    for (const id of ['work-stair', 'hobbies-stair'] as const) {
+  it('keeps lowered employment and interests stairs above the low endpoint', () => {
+    for (const id of ['employment-stair', 'interests-stair'] as const) {
       const stair = WORLD_MAP.modules.find((module) => module.id === id)!;
       const steps = getStairSteps(stair, WORLD_MAP.nodes);
 

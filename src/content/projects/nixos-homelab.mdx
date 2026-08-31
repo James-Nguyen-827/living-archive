@@ -1,0 +1,38 @@
+---
+title: NixOS Homelab
+summary: A declarative homelab with reproducible builds, CI-gated configuration, remote deployment, and a custom modded Minecraft service.
+status: maintained
+year: 2026
+tags: [NixOS, infrastructure, CI/CD, self-hosting]
+featured: true
+previewImage: /case-studies/nixos/deploy-pipeline.svg
+previewAlt: Five-step NixOS pipeline from editing modules through build, continuous integration, deployment, and running services.
+caseStudy:
+  role: System owner and developer
+  collaboration: Independent homelab
+  contribution: Declarative configuration, CI-gated builds, remote deployment, SSH policy, and custom modpack packaging.
+  outcome: A versioned server configuration that can be reviewed, rebuilt, validated, and applied from source.
+  repository: https://github.com/James-Nguyen-827/NixOS
+  diagram: deploy-pipeline
+  nextProject: living-archive
+---
+
+The NixOS Homelab turns a personal server into infrastructure that can be reviewed, rebuilt, and deployed from source instead of maintained through a trail of one-off shell commands.
+
+## Rebuildable by default
+
+The configuration is organized as modular Nix and pinned with a flake. User accounts, SSH policy, hardware settings, and hosted services live in versioned modules, while a small set of `just` recipes provides consistent build and deployment commands.
+
+GitHub Actions builds the configuration when relevant Nix files change. The local and CI workflows use the same system-build target, so a broken configuration can be caught before it reaches the server.
+
+## From commit to server
+
+Deployment happens remotely over SSH. The server pulls the committed configuration and applies it with `nixos-rebuild switch`, keeping the deployed state connected to the repository history.
+
+Key-only SSH authentication and disabled password login reduce the exposed surface. Passwordless administrative access remains an explicit homelab tradeoff rather than an unnoticed default.
+
+## Packaging the unusual part
+
+The most involved service is a modded Minecraft server. Instead of relying on a stock package, the configuration vendors a modpack installer as a Nix derivation and wraps it in first-boot setup logic. The first launch installs the selected Modrinth pack; later launches reuse the persistent server data.
+
+Explore the configuration and deployment workflow in the [NixOS Homelab repository](https://github.com/James-Nguyen-827/NixOS).

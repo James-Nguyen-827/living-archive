@@ -44,6 +44,8 @@ html {
 }
 
 body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   margin: 0;
   min-width: 0;
   min-height: 100vh;
@@ -51,6 +53,10 @@ body {
   font-size: clamp(1rem, 0.96rem + 0.16vw, 1.125rem);
   line-height: 1.55;
   transition: background-color 900ms var(--ease-out-quint), color 900ms var(--ease-out-quint);
+}
+
+main {
+  min-width: 0;
 }
 
 ::selection {
@@ -256,14 +262,28 @@ ol.indexed-list {
 
 .article-head {
   display: grid;
-  gap: 1rem;
-  max-width: var(--measure);
+  grid-template-columns: minmax(0, var(--measure)) auto;
+  gap: 2rem;
+  align-items: start;
+  max-width: 62rem;
   padding-bottom: clamp(2rem, 4vw, 3rem);
   border-bottom: 1px solid var(--line);
 }
 
+.article-head__copy {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+}
+
 .article-head h1 {
   margin-bottom: 0;
+  font-size: clamp(3rem, 8vw, 8rem);
+  overflow-wrap: anywhere;
+}
+
+.article-head .section-mark {
+  justify-self: end;
 }
 
 .article-meta {
@@ -324,7 +344,7 @@ ol.indexed-list {
 }
 
 .empty-state {
-  width: min(100%, var(--content-width));
+  width: min(100%, 62rem);
   margin: 0 auto;
   padding: clamp(3rem, 8vw, 8rem) var(--page-gutter);
   color: var(--muted-ink);
@@ -346,6 +366,19 @@ ol.indexed-list {
     grid-column: 1;
     grid-row: auto;
     max-width: none;
+  }
+
+  .article-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .article-head .section-mark {
+    grid-row: 1;
+    justify-self: start;
+  }
+
+  .article-head h1 {
+    font-size: clamp(2.5rem, 14vw, 5rem);
   }
 }
 

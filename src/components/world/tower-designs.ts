@@ -40,9 +40,9 @@ export interface TowerDesign {
 
 export function towerArchetypeFromModuleId(moduleId: string): TowerArchetype {
   switch (moduleId) {
-    case 'work-tower': return 'project-court';
-    case 'notes-tower': return 'index-engine';
-    case 'experiments-tower': return 'paradox-gate';
+    case 'employment-tower': return 'project-court';
+    case 'writing-tower': return 'index-engine';
+    case 'projects-tower': return 'paradox-gate';
     default: return 'orrery';
   }
 }

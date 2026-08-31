@@ -1,11 +1,11 @@
-import { defineCollection } from 'astro:content';
+import { defineCollection, reference } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 
 const status = z.enum(['complete', 'in-progress', 'maintained', 'archived']);
 
-const work = defineCollection({
-  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/work' }),
+const employment = defineCollection({
+  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/employment' }),
   schema: z.object({
     title: z.string(),
     summary: z.string(),
@@ -19,8 +19,8 @@ const work = defineCollection({
   }),
 });
 
-const notes = defineCollection({
-  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/notes' }),
+const writing = defineCollection({
+  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/writing' }),
   schema: z.object({
     title: z.string(),
     summary: z.string(),
@@ -30,17 +30,48 @@ const notes = defineCollection({
   }),
 });
 
-const archive = defineCollection({
-  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/archive' }),
-  schema: z.object({
-    title: z.string(),
-    summary: z.string(),
-    kind: z.enum(['experiment', 'hobby']),
-    status,
-    year: z.number().int(),
-    tags: z.array(z.string()).default([]),
-    featured: z.boolean().default(false),
+const archiveEntry = z.object({
+  title: z.string(),
+  summary: z.string(),
+  draft: z.boolean().default(false),
+  status,
+  year: z.number().int(),
+  tags: z.array(z.string()).default([]),
+  featured: z.boolean().default(false),
+});
+
+const projectCaseStudy = z.object({
+  role: z.string(),
+  collaboration: z.string().optional(),
+  contribution: z.string(),
+  outcome: z.string(),
+  repository: z.url(),
+  hero: z.object({
+    src: z.string(),
+    alt: z.string().min(1),
+    caption: z.string().min(1),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+  }).optional(),
+  diagram: z.enum(['dual-path', 'well-plate', 'deploy-pipeline']).optional(),
+  nextProject: reference('projects').optional(),
+});
+
+const projects = defineCollection({
+  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/projects' }),
+  schema: archiveEntry.extend({
+    previewImage: z.string().optional(),
+    previewAlt: z.string().min(1).optional(),
+    caseStudy: projectCaseStudy.optional(),
+  }).refine((entry) => !entry.previewImage || Boolean(entry.previewAlt), {
+    message: 'previewAlt is required when previewImage is present',
+    path: ['previewAlt'],
   }),
 });
 
-export const collections = { work, notes, archive };
+const interests = defineCollection({
+  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/interests' }),
+  schema: archiveEntry,
+});
+
+export const collections = { employment, writing, projects, interests };

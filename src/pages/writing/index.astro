@@ -1,0 +1,28 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageIntro from '../../components/PageIntro.astro';
+import ContentIndex from '../../components/ContentIndex.astro';
+import { BLOGS_EMPTY_MESSAGE } from '../../config/site';
+
+const posts = (await getCollection('writing')).sort(
+  (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf(),
+);
+const formatter = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: 'numeric' });
+const items = posts.map((post) => ({
+  href: `/writing/${post.id}`,
+  title: post.data.title,
+  summary: post.data.summary,
+  meta: formatter.format(post.data.publishDate),
+}));
+---
+
+<BaseLayout title="Blogs" description="Notes, experiments, and observations from work in progress.">
+  <PageIntro section="writing" title="Blogs" description="Notes, experiments, and small things worth writing down." />
+  {posts.length > 0 ? <ContentIndex items={items} /> : <p class="empty-state">{BLOGS_EMPTY_MESSAGE}</p>}
+  <p class="note-rss page-shell"><a href="/rss.xml">RSS</a></p>
+</BaseLayout>
+
+<style>
+  .note-rss { margin: 0; padding-block: 1.5rem 3rem; }
+</style>

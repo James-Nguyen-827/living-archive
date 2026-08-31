@@ -56,23 +56,23 @@ describe('WORLD_MAP stable sculpture', () => {
 
   it('authors one deterministic arrival reaction for every zone', () => {
     expect(WORLD_REACTIONS.map((reaction) => reaction.zone).sort()).toEqual([
-      'about', 'experiments', 'field-notes', 'hobbies', 'work',
+      'about', 'employment', 'interests', 'projects', 'writing',
     ]);
     expect(new Set(WORLD_REACTIONS.map((reaction) => reaction.kind)).size).toBe(5);
   });
 
-  it('keeps Project Court centered on the work platform so the traveler arrives inside the courtyard', () => {
-    const platform = WORLD_MAP.modules.find((module) => module.id === 'work-platform');
-    const tower = WORLD_MAP.modules.find((module) => module.id === 'work-tower');
-    const workZone = WORLD_MAP.nodes.find((node) => node.id === 'work-zone');
+  it('keeps Project Court centered on the employment platform so the traveler arrives inside the courtyard', () => {
+    const platform = WORLD_MAP.modules.find((module) => module.id === 'employment-platform');
+    const tower = WORLD_MAP.modules.find((module) => module.id === 'employment-tower');
+    const employmentZone = WORLD_MAP.nodes.find((node) => node.id === 'employment-zone');
     expect(platform).toBeDefined();
     expect(tower).toBeDefined();
-    expect(workZone).toBeDefined();
+    expect(employmentZone).toBeDefined();
 
     expect(tower!.transform.position).toEqual([-7, 0, 0]);
     expect(tower!.transform.quarterTurns).toBe(1);
-    expect(workZone!.position[0]).toBe(tower!.transform.position[0]);
-    expect(workZone!.position[2]).toBe(tower!.transform.position[2]);
+    expect(employmentZone!.position[0]).toBe(tower!.transform.position[0]);
+    expect(employmentZone!.position[2]).toBe(tower!.transform.position[2]);
 
     const envelope = towerDesignEnvelope(towerDesign('project-court', tower!.size[1]));
     const platformEdge = platformBounds(platform!);
@@ -85,9 +85,9 @@ describe('WORLD_MAP stable sculpture', () => {
     expect(platformEdge.south - footprint.south).toBeGreaterThanOrEqual(minMargin);
   });
 
-  it('keeps the Index Engine centered on the notes platform', () => {
-    const platform = WORLD_MAP.modules.find((module) => module.id === 'notes-platform');
-    const tower = WORLD_MAP.modules.find((module) => module.id === 'notes-tower');
+  it('keeps the Index Engine centered on the writing platform', () => {
+    const platform = WORLD_MAP.modules.find((module) => module.id === 'writing-platform');
+    const tower = WORLD_MAP.modules.find((module) => module.id === 'writing-tower');
     expect(platform).toBeDefined();
     expect(tower).toBeDefined();
 
@@ -119,31 +119,31 @@ describe('WORLD_MAP stable sculpture', () => {
     expect(platformEdge.south - footprint.south).toBeGreaterThanOrEqual(minMargin);
   });
 
-  it('parks the Field Notes traveler on the south-east corner of the notes platform', () => {
-    const notesZone = WORLD_MAP.nodes.find((node) => node.id === 'notes-zone');
-    const platform = WORLD_MAP.modules.find((module) => module.id === 'notes-platform');
+  it('parks the Writing traveler on the south-east corner of the writing platform', () => {
+    const writingZone = WORLD_MAP.nodes.find((node) => node.id === 'writing-zone');
+    const platform = WORLD_MAP.modules.find((module) => module.id === 'writing-platform');
 
-    expect(notesZone?.position).toEqual([1, 0.5, -7]);
+    expect(writingZone?.position).toEqual([1, 0.5, -7]);
     expect(platform).toBeDefined();
-    expect(notesZone!.position[0]).toBe(platform!.transform.position[0] + platform!.size[0] / 2 - 0.5);
-    expect(notesZone!.position[2]).toBe(platform!.transform.position[2] + platform!.size[2] / 2 - 0.5);
+    expect(writingZone!.position[0]).toBe(platform!.transform.position[0] + platform!.size[0] / 2 - 0.5);
+    expect(writingZone!.position[2]).toBe(platform!.transform.position[2] + platform!.size[2] / 2 - 0.5);
   });
 
   it('binds the Index Engine to its longer arrival contract without changing the public tower id', () => {
-    const reaction = WORLD_REACTIONS.find((candidate) => candidate.zone === 'field-notes');
+    const reaction = WORLD_REACTIONS.find((candidate) => candidate.zone === 'writing');
 
     expect(reaction).toEqual({
-      zone: 'field-notes',
+      zone: 'writing',
       kind: 'index-sequence',
-      moduleIds: ['notes-tower'],
+      moduleIds: ['writing-tower'],
       durationMs: 1_400,
     });
   });
 
   it('keeps the other narrative towers on their authored arrival contracts', () => {
     const towerByZone = new Map([
-      ['work', 'work-tower'],
-      ['experiments', 'experiments-tower'],
+      ['employment', 'employment-tower'],
+      ['projects', 'projects-tower'],
       ['about', 'about-tower'],
     ] as const);
 

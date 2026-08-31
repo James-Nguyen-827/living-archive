@@ -1,0 +1,44 @@
+---
+title: ColorCam
+summary: A Raspberry Pi lab platform that turns a 3D printer into an automated well-plate imager and exports repeatable colorimetric assay data.
+status: in-progress
+year: 2026
+tags: [Python, Raspberry Pi, computer vision, lab automation]
+featured: true
+previewImage: /case-studies/colorcam/well-location-sample.jpg
+previewAlt: Camera view through a clear multi-well plate, centered on one circular well.
+caseStudy:
+  role: Software contributor
+  collaboration: Esquerra Lab at San Francisco State University, building on Johnny Duong's original FlyCam work.
+  contribution: Color-assay measurement and CSV export, multi-round scheduling, camera compatibility, and capture inspection tools.
+  outcome: A repeatable path from plate calibration through captured measurements and experiment output, with the acquisition conditions visible.
+  repository: https://github.com/E-Lab-SFSU/ColorCam
+  hero:
+    src: /case-studies/colorcam/well-location-sample.jpg
+    alt: Camera view through a clear multi-well plate, centered on one circular well.
+    caption: Development sample from ColorCam's well-location tooling; shown as capture evidence, not assay results.
+    width: 640
+    height: 480
+  diagram: well-plate
+  nextProject: nixos-homelab
+---
+
+ColorCam is a collaborative Esquerra Lab project at San Francisco State University. It repurposes a Marlin-compatible 3D printer as a programmable positioning stage, pairing its XYZ motion with a Raspberry Pi camera for automated well-plate experiments.
+
+## From motion to measurement
+
+A researcher can define the corners of a plate, generate a serpentine path across its wells, and run repeated imaging passes. The application moves the camera to each position, waits for the stage to settle, captures the region of interest, and records the result without requiring the operator to realign every sample by hand.
+
+The camera layer supports Raspberry Pi and USB backends. Live previews, exposure controls, crosshair targeting, and RGB histograms help establish consistent capture conditions before a run begins.
+
+## My contributions
+
+My work on the current system includes per-well color-assay measurement and CSV export, multi-round experiment scheduling, camera-backend compatibility, and the capture tools used to inspect and preserve each result. Recent additions include trimmed-mean RGB measurement, control-relative color deltas, ROI thumbnails, capture metadata, and cropped raw DNG output.
+
+The goal is not only to collect images, but to make the conditions behind each measurement visible and repeatable.
+
+## A continuing lab project
+
+ColorCam builds on the lab's earlier FlyCam system and the work of its original developer, Johnny Duong. The current repository reflects contributions from multiple lab members, so this project is presented as collaborative work rather than a solo build.
+
+Read the documentation and development history in the [E-Lab SFSU ColorCam repository](https://github.com/E-Lab-SFSU/ColorCam).

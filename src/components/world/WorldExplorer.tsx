@@ -8,12 +8,14 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useReducer,
   useRef,
   useState,
 } from 'react';
+import { THEME_COLORS } from '../../config/theme';
 import { ArchiveWindow } from './ArchiveWindow';
-import { resolveLabelLayout, type ProjectedLabel } from './label-layout';
+import { bottomOcclusionHeight, resolveLabelLayout, type ProjectedLabel } from './label-layout';
 import { findPath } from './pathfinding';
 import { readTheme, writeTheme } from './theme-storage';
 import { WORLD_MAP, ZONE_NODES } from './world-map';
@@ -61,9 +63,10 @@ export function WorldExplorer({ zones }: Props) {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [rotationAngle, setRotationAngle] = useState(0);
   const [reactionSequence, setReactionSequence] = useState(0);
-  const worldRef = useRef<HTMLElement>(null);
+  const worldRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef(new Map<ZoneId, HTMLLIElement>());
+  const lastProjectedLabels = useRef<readonly ProjectedLabel[]>([]);
   const indexButtonRef = useRef<HTMLButtonElement>(null);
   const initiatingControl = useRef<HTMLElement | null>(null);
   const historyDepth = useRef(0);
@@ -128,7 +131,7 @@ export function WorldExplorer({ zones }: Props) {
   useEffect(() => {
     document.documentElement.dataset.theme = state.theme;
     document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-      ?.setAttribute('content', state.theme === 'night' ? '#191919' : '#ffffff');
+      ?.setAttribute('content', THEME_COLORS[state.theme]);
   }, [state.theme]);
 
   useEffect(() => {
@@ -182,6 +185,7 @@ export function WorldExplorer({ zones }: Props) {
   const projectLabels = useCallback((projected: readonly ProjectedLabel[]) => {
     const viewport = viewportRef.current;
     if (!viewport) return;
+    lastProjectedLabels.current = projected;
     const measured = projected.map((label) => {
       const element = labelRefs.current.get(label.id as ZoneId);
       if (!element) return label;
@@ -192,10 +196,13 @@ export function WorldExplorer({ zones }: Props) {
         height: Math.max(1, Math.round(rect.height)),
       };
     });
+    const viewportBounds = viewport.getBoundingClientRect();
+    const archiveBounds = worldRef.current?.querySelector<HTMLElement>('.archive-window')?.getBoundingClientRect() ?? null;
     const laidOut = resolveLabelLayout(measured, {
       width: viewport.clientWidth,
       height: viewport.clientHeight,
       padding: 12,
+      bottomOcclusion: bottomOcclusionHeight(viewportBounds, archiveBounds),
     });
     for (const label of laidOut) {
       const element = labelRefs.current.get(label.id as ZoneId);
@@ -206,6 +213,11 @@ export function WorldExplorer({ zones }: Props) {
       element.dataset.projected = 'true';
     }
   }, []);
+
+  useLayoutEffect(() => {
+    if (lastProjectedLabels.current.length === 0) return;
+    projectLabels(lastProjectedLabels.current);
+  }, [projectLabels, state.windowContent]);
 
   function beginReturnHome(fromNodeId: string) {
     if (fromNodeId === WORLD_MAP.spawnNodeId) return;
@@ -316,9 +328,10 @@ export function WorldExplorer({ zones }: Props) {
   }
 
   return (
-    <section
+    <div
       ref={worldRef}
       className="world-explorer"
+      role="region"
       data-theme={state.theme}
       data-phase={state.phase}
       data-angle={rotationAngle}
@@ -326,7 +339,7 @@ export function WorldExplorer({ zones }: Props) {
       data-selected-zone={state.selectedZone ?? ''}
       data-fallback={!mounted || Boolean(fallback) || !canvasReady}
       tabIndex={0}
-      aria-label="Interactive Living Archive world"
+      aria-label="Interactive portfolio world for James Nguyen"
       onKeyDown={handleKeyDown}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -389,8 +402,8 @@ export function WorldExplorer({ zones }: Props) {
       </div>
 
       <p className="world-help">
-        <span className="world-help__desktop">Drag to orbit · choose an island</span>
-        <span className="world-help__mobile">Drag to orbit · tap an island</span>
+        <span className="world-help__desktop">Drag to orbit · choose a place; the traveler opens its archive</span>
+        <span className="world-help__mobile">Tap a place; the traveler opens its archive · drag to orbit</span>
       </p>
       <p className="sr-only" aria-live="polite">{state.announcement}</p>
 
@@ -405,6 +418,6 @@ export function WorldExplorer({ zones }: Props) {
           onBackToZone={backToZone}
         />
       )}
-    </section>
+    </div>
   );
 }

@@ -26,7 +26,7 @@ afterEach(cleanup);
 
 describe('Index Engine tower renderer', () => {
   it('renders exactly two static tone meshes, two instanced keyed meshes, one carriage mesh, and one window mesh', () => {
-    const module = WORLD_MAP.modules.find((candidate) => candidate.id === 'notes-tower')!;
+    const module = WORLD_MAP.modules.find((candidate) => candidate.id === 'writing-tower')!;
     const design = towerDesign('index-engine', module.size[1]);
     const { container } = render(
       <TowerModule
@@ -52,7 +52,7 @@ describe('Index Engine tower renderer', () => {
   });
 
   it('maps six authored keyed assemblies to neutral pose transforms', () => {
-    const module = WORLD_MAP.modules.find((candidate) => candidate.id === 'notes-tower')!;
+    const module = WORLD_MAP.modules.find((candidate) => candidate.id === 'writing-tower')!;
     const design = towerDesign('index-engine', module.size[1]);
     const transforms = [
       ...Array.from({ length: 4 }, (_unused, index) => ({

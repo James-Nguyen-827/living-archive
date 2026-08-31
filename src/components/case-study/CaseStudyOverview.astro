@@ -1,0 +1,83 @@
+---
+interface Props {
+  role: string;
+  collaboration?: string;
+  contribution: string;
+  outcome: string;
+  repository: string;
+}
+
+const { role, collaboration, contribution, outcome, repository } = Astro.props;
+---
+
+<section class="case-study-overview" aria-labelledby="case-study-overview-title">
+  <h2 id="case-study-overview-title">Project frame</h2>
+  <dl>
+    <div>
+      <dt>Role</dt>
+      <dd>{role}</dd>
+    </div>
+    <div>
+      <dt>Collaboration</dt>
+      <dd>{collaboration ?? 'Independent project'}</dd>
+    </div>
+    <div>
+      <dt>Contribution</dt>
+      <dd>{contribution}</dd>
+    </div>
+    <div>
+      <dt>Outcome</dt>
+      <dd>{outcome}</dd>
+    </div>
+  </dl>
+  <p><a href={repository}>Open the project repository</a></p>
+</section>
+
+<style>
+  .case-study-overview {
+    margin-bottom: clamp(3rem, 7vw, 5rem);
+    border-top: 1px solid var(--line);
+  }
+
+  .case-study-overview h2 {
+    margin: 0;
+    padding-block: 1rem;
+    border-bottom: 1px solid var(--line);
+    font-size: clamp(1.8rem, 4vw, 3rem);
+  }
+
+  .case-study-overview dl {
+    margin: 0;
+  }
+
+  .case-study-overview dl > div {
+    display: grid;
+    grid-template-columns: minmax(7rem, .35fr) 1fr;
+    gap: 1.25rem;
+    padding-block: 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .case-study-overview dt {
+    color: var(--olive);
+    font: 600 .8rem/1.2 var(--display);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .case-study-overview dd {
+    margin: 0;
+    color: var(--muted-ink);
+  }
+
+  .case-study-overview p {
+    margin: 1rem 0 0;
+  }
+
+  @media (max-width: 36rem) {
+    .case-study-overview dl > div {
+      grid-template-columns: 1fr;
+      gap: .35rem;
+    }
+  }
+</style>

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import SectionMark, { type SectionKind } from '../components/SectionMark.astro';
 
 interface Props {
   title: string;
@@ -7,16 +8,21 @@ interface Props {
   meta: string;
   kind?: 'website' | 'article';
   image?: string;
+  section: SectionKind;
 }
 
-const { title, summary, meta, kind = 'article', image = '/og/archive.png' } = Astro.props;
+const { title, summary, meta, section, kind = 'article', image = '/og/archive.png' } = Astro.props;
 ---
 
 <BaseLayout title={title} description={summary} kind={kind} image={image}>
   <article class="article-shell">
     <header class="article-head">
-      <p class="article-meta meta-list">{meta}</p>
-      <h1>{title}</h1>
+      <div class="article-head__copy">
+        <p class="article-meta meta-list">{meta}</p>
+        <h1>{title}</h1>
+        <p class="article-summary">{summary}</p>
+      </div>
+      <SectionMark section={section} />
     </header>
     <div class="article-body"><slot /></div>
   </article>

@@ -7,6 +7,7 @@ import '../styles/global.css';
 import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import { site } from '../config/site';
+import { THEME_COLORS, THEME_STORAGE_KEY } from '../config/theme';
 
 interface Props {
   title?: string;
@@ -22,8 +23,8 @@ const {
   kind = 'website',
 } = Astro.props;
 const pageTitle = title === site.name ? title : `${title} — ${site.name}`;
-const canonical = new URL(Astro.url.pathname, site.url);
-const imageUrl = new URL(image, site.url);
+const canonical = site.url ? new URL(Astro.url.pathname, site.url) : null;
+const imageUrl = site.url ? new URL(image, site.url) : null;
 ---
 
 <!doctype html>
@@ -33,26 +34,33 @@ const imageUrl = new URL(image, site.url);
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#ffffff" />
-    <link rel="canonical" href={canonical} />
-    <link rel="alternate" type="application/rss+xml" title={`${site.name} field notes`} href="/rss.xml" />
+    <meta name="theme-color" content={THEME_COLORS.day} />
+    {canonical && <link rel="canonical" href={canonical} />}
+    <link rel="alternate" type="application/rss+xml" title={`${site.name} blogs`} href="/rss.xml" />
     <meta property="og:type" content={kind} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={imageUrl} />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={`${pageTitle} social preview`} />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image:alt" content={`${pageTitle} social preview`} />
+    {canonical && <meta property="og:url" content={canonical} />}
+    {imageUrl && (
+      <>
+        <meta property="og:image" content={imageUrl} />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content={`${pageTitle} social preview`} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image:alt" content={`${pageTitle} social preview`} />
+      </>
+    )}
     <title>{pageTitle}</title>
-    <script is:inline>
+    <script is:inline define:vars={{ themeColors: THEME_COLORS, themeStorageKey: THEME_STORAGE_KEY }}>
       (() => {
         try {
-          const stored = localStorage.getItem('portfolio-theme');
-          if (stored === 'day' || stored === 'night') document.documentElement.dataset.theme = stored;
+          const stored = localStorage.getItem(themeStorageKey);
+          if (stored === 'day' || stored === 'night') {
+            document.documentElement.dataset.theme = stored;
+            document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColors[stored]);
+          }
         } catch {}
       })();
     </script>

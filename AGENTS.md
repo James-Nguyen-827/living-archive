@@ -1,4 +1,4 @@
-# Living Archive — Agent Handoff
+# James Nguyen — Agent Handoff
 
 This file is the durable project context for coding agents, including Cursor. Read it before changing the site.
 
@@ -6,7 +6,7 @@ This file is the durable project context for coding agents, including Cursor. Re
 
 Build an original personal portfolio that behaves like a place rather than a résumé grid. The homepage is a low-poly, orthographic eco-brutalist habitat inspired by the playfulness of Monument Valley and spatial portfolio experiences, without copying their assets or identity.
 
-Visitors can freely orbit one stable sculpture, select an island, and watch a small geometric traveler navigate there automatically. Work, Field Notes, Experiments, Hobbies, and About must also remain immediately accessible through semantic HTML, static routes, and `/index`.
+Visitors can freely orbit one stable sculpture, select an island, and watch a small geometric traveler navigate there automatically. Employment, Writing, Projects, Interests, and About must also remain immediately accessible through semantic HTML, static routes, and `/index`.
 
 ## Non-negotiable interaction rules
 
@@ -53,6 +53,8 @@ The Playwright configuration builds the static site and serves it on `127.0.0.1:
 - `src/components/world/use-ambient-tick.ts` — shared 50ms demand tick for carousel spin and tower idle motion.
 - `src/components/world/ArchiveWindow.tsx` — accessible zone/index/preview window.
 - `src/components/world/world.css` — responsive labels, controls, desktop window, mobile sheet, motion.
+- `src/components/SectionMark.astro` — noninteractive landmark-derived marks for conventional routes.
+- `src/components/case-study/` — typed project overview, evidence, diagram, and next-project treatments.
 - `src/pages/index.astro` — collection-to-zone data and homepage island.
 - `tests/e2e/archive.spec.ts` — interaction, history, accessibility, fallback, and responsive checks.
 - `tests/e2e/visual.spec.ts` — day/night, window, preview, fallback, and orbit visual regressions.
@@ -60,9 +62,9 @@ The Playwright configuration builds the static site and serves it on `127.0.0.1:
 
 ## Content model
 
-`work`, `notes`, and `archive` are local build-time collections. Archive entries use `kind: experiment | hobby`. Zone preview entries require `title`, `href`, `meta`, and `summary`, with optional `previewImage` and `previewAlt`.
+`employment`, `writing`, `projects`, and `interests` are local build-time collections. Zone preview entries require `title`, `href`, `meta`, and `summary`, with optional `previewImage` and `previewAlt`. Projects may add a typed `caseStudy` block. Archive entries support `draft: true`; draft Interests must remain excluded from routes, indexes, the world archive, sitemap, and previews.
 
-Identity and publishing placeholders live in `src/config/site.ts`. Do not publish until the real name/brand decision, email, profile links, résumé details, canonical URL, and launch content are supplied.
+The public email and profile links have committed defaults in `src/config/site.ts`. Do not publish until `PUBLIC_SITE_URL` supplies a valid canonical domain; local builds intentionally omit URL metadata and the sitemap.
 
 ## Geometry and performance constraints
 
@@ -77,6 +79,27 @@ Identity and publishing placeholders live in `src/config/site.ts`. Do not publis
 The repository is tracked and feature work may live in linked worktrees. Treat every existing file and change as user work. Do not reset, clean, delete, or mass-reformat the workspace. Do not commit unless the user requests it.
 
 ## Current handoff status
+
+Portfolio authorship and release-readiness pass implemented (2026-08-30):
+
+- Replaced identity placeholders with James Nguyen's public email, GitHub, and LinkedIn values; canonical URL metadata is conditional and release validation remains blocked without `PUBLIC_SITE_URL`
+- Raised named mobile navigation, world, archive, fallback, and footer targets to at least 44×44 CSS pixels and restored the archive primary action contrast
+- Added typed project case studies and authored Living Archive, ColorCam, and NixOS Homelab with semantic evidence, code-native diagrams, repository links, preview imagery, and cyclic next-project navigation
+- Marked all three placeholder Interests entries as drafts and excluded them from every public surface while preserving their source files
+- Added landmark-derived section marks, exact authored empty states and wayfinding, a route-recovery 404, and responsive long-title behavior
+- Expanded functional, metadata, accessibility, draft-route, 200% text-size, and desktop/mobile visual-regression coverage
+- `public/world-poster.png` was not regenerated because the WebGL scene did not change
+
+Verification for this pass:
+
+- `npm test -- --run` — 19 files, 116 tests passed
+- `npm run validate:world` — 8 tests passed
+- `npm run check` — 83 files checked with 0 errors, warnings, or hints
+- `npm run build` — succeeded; 18 pages built and WorldCanvas remained within its 307,200-byte gzip budget at 245,682 bytes
+- Impeccable detector over `src` — no findings
+- `npx playwright test --workers=3` — 91 passed, 24 intentionally skipped
+- Generated output contains no `example.com`; only `/interests/index.html` is emitted beneath `/interests`
+- `npm run validate:release` blocks without `PUBLIC_SITE_URL` and passes when a valid URL is supplied
 
 Project Court gantry ceremony complete (2026-08-28). The four landmarks remain the Work Project Court, Field Notes Pagewell, Experiments Paradox Gate, and About Orrery Beacon. Verification from this pass:
 
@@ -144,4 +167,4 @@ Shipped in the earlier polish pass:
 - Camera return uses 900ms ease-in-out; softer zoom lerp
 - Distinct pine vs bush trees, living water + waterfall ledge, windy grass, ruin accents, work bridge-sweep
 
-Remaining before publish (content, not interaction): real name/brand, email, profile links, résumé details, canonical URL, and launch content in `src/config/site.ts`.
+Remaining before publish: supply the canonical domain through `PUBLIC_SITE_URL` and run `npm run validate:release`.

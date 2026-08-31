@@ -1,0 +1,44 @@
+---
+title: Living Archive
+summary: An accessible portfolio built as a navigable low-poly habitat, with deterministic pathfinding and conventional routes beneath the spatial interface.
+status: in-progress
+year: 2026
+tags: [Astro, TypeScript, WebGL, accessibility]
+featured: true
+previewImage: /world-poster.png
+previewAlt: Orthographic low-poly portfolio habitat with six connected platforms, towers, water, trees, and a coral traveler.
+caseStudy:
+  role: Designer and developer
+  collaboration: Independent project
+  contribution: Experience architecture, authored world geometry, accessible interaction, and validation systems.
+  outcome: One portfolio that supports spatial exploration and complete conventional routes without changing its content or topology.
+  repository: https://github.com/James-Nguyen-827/living-archive
+  hero:
+    src: /world-poster.png
+    alt: Orthographic low-poly portfolio habitat with six connected platforms, towers, water, trees, and a coral traveler.
+    caption: The authored habitat keeps one stable topology while visitors orbit and select destinations.
+    width: 1200
+    height: 648
+  diagram: dual-path
+  nextProject: colorcam
+---
+
+Living Archive is the portfolio you are using now. Instead of arranging work as a résumé grid, it presents one connected low-poly habitat that can be orbited, explored, and read as a personal place.
+
+## A portfolio with two ways through
+
+Visitors can select an island and watch a small geometric traveler find its route across the world. The same employment, writing, projects, interests, and about content remains available through semantic HTML, static pages, and a conventional index.
+
+That second path is part of the design rather than a fallback added at the end. The essential content does not depend on WebGL, animation, pointer input, or JavaScript.
+
+## Authored structure
+
+The world is assembled from deliberate low-poly primitives on a fixed grid. Rotation changes the view, never the topology. Travel runs deterministic A* pathfinding over one validated graph, and a visitor can choose a new destination while the traveler is already moving.
+
+Accessible DOM labels are projected from authored 3D anchors so they remain upright, focusable, and clickable as the scene rotates. Reduced-motion, data-saving, keyboard-only, and no-WebGL paths are treated as complete experiences.
+
+## Building a dependable illusion
+
+The project uses Astro, React, React Three Fiber, Three.js, TypeScript, MDX, and vanilla CSS. Geometry validation, unit tests, accessibility checks, visual regression coverage, and scene-budget checks keep the playful surface tied to predictable behavior.
+
+The work is ongoing. Follow the implementation in the [Living Archive repository](https://github.com/James-Nguyen-827/living-archive).

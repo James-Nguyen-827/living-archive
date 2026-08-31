@@ -1,0 +1,24 @@
+---
+title: COVID-19 CT Analysis
+summary: A team-built pipeline that segments, registers, and quantifies changes in infection across longitudinal chest CT scans.
+status: complete
+year: 2025
+tags: [Python, medical imaging, computer vision, data analysis]
+featured: true
+---
+
+This team project explored how a sequence of chest CT scans could be aligned and measured to show whether simulated COVID-19 lung infection was spreading, regressing, or remaining stable over time.
+
+## A longitudinal pipeline
+
+The system combines three stages. Segmentation isolates lung tissue and infection regions. Registration aligns scans captured at different time points. Quantification turns the resulting masks and aligned volumes into measurements that can be compared across the sequence.
+
+The implementation uses 3D region growing and level-set refinement for segmentation, mutual-information rigid registration for global alignment, and B-spline deformation for local anatomical differences.
+
+## Making change measurable
+
+The final stage calculates infection volume as a percentage of lung volume, supports Dice-coefficient comparison when expert masks are available, and tracks changes in infection size and intensity between scans.
+
+My role was to manage the shared GitHub repository, integrate the program modules, and develop the quantification pipeline. Teammates led segmentation, registration, reconstruction, visualization, preprocessing, and system debugging.
+
+The project used simulated patient data as an academic image-analysis exercise; it was not presented as a clinical diagnostic system. The full team breakdown and methods are documented in the [COVID-19 CT Analysis repository](https://github.com/James-Nguyen-827/CSC-621-Team-Sky-Project).

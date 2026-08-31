@@ -1,0 +1,26 @@
+---
+import { getCollection, getEntry, render } from 'astro:content';
+import EntryLayout from '../../layouts/EntryLayout.astro';
+import CaseStudyOverview from '../../components/case-study/CaseStudyOverview.astro';
+import EvidenceFigure from '../../components/case-study/EvidenceFigure.astro';
+import CaseStudyDiagram from '../../components/case-study/CaseStudyDiagram.astro';
+import NextProject from '../../components/case-study/NextProject.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('projects');
+  return entries.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const caseStudy = entry.data.caseStudy;
+const nextProject = caseStudy?.nextProject ? await getEntry(caseStudy.nextProject) : null;
+---
+
+<EntryLayout title={entry.data.title} summary={entry.data.summary} meta={`${entry.data.year} / ${entry.data.status} / ${entry.data.tags.join(' · ')}`} section="projects">
+  {caseStudy && <CaseStudyOverview {...caseStudy} />}
+  {caseStudy?.hero && <EvidenceFigure {...caseStudy.hero} />}
+  {caseStudy?.diagram && <CaseStudyDiagram variant={caseStudy.diagram} />}
+  <Content />
+  {nextProject && <NextProject href={`/projects/${nextProject.id}`} title={nextProject.data.title} />}
+</EntryLayout>

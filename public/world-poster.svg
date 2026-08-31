@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
-  <title id="title">Living Archive world</title>
+  <title id="title">James Nguyen portfolio world</title>
   <desc id="desc">A precise low-poly landscape of square platforms, bridges, towers, trees, water, and a coral traveler.</desc>
   <rect width="1200" height="760" fill="#fff"/>
   <g stroke="#52602f" stroke-width="3" stroke-linejoin="round">
@@ -26,4 +26,3 @@
   <g fill="#e85f48"><path d="m248 293 15-9 15 9-15 9Z"/><path d="m493 48 15-9 15 9-15 9Z"/><path d="m928 384 15-9 15 9-15 9Z"/></g>
   <g transform="translate(540 370)"><path d="m0 0 12 7v28l-12 7-12-7V7Z" fill="#e85f48"/><path d="m0-18 13 8L0-2l-13-8Z" fill="#fff" stroke="#52602f" stroke-width="2"/></g>
 </svg>
-

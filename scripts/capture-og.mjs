@@ -1,7 +1,7 @@
 import { chromium } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
-const names = ['default', 'work', 'notes', 'archive'];
+const names = ['default', 'employment', 'writing', 'projects', 'interests'];
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
 

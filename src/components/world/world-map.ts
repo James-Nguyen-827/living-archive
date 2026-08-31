@@ -20,26 +20,26 @@ const transform = (
 
 const modules: WorldModule[] = [
   { id: 'central-platform', kind: 'platform', size: [5, 0.25, 5], transform: transform([0, 0, 0]) },
-  { id: 'work-platform', kind: 'platform', size: [3, 0.25, 3], transform: transform([-7, -0.5, 0]) },
-  { id: 'notes-platform', kind: 'platform', size: [3, 0.25, 3], transform: transform([0, 0.5, -8]) },
-  { id: 'experiments-platform', kind: 'platform', size: [3, 0.25, 3], transform: transform([8, 0.5, 0]) },
-  { id: 'hobbies-platform', kind: 'platform', size: [3, 0.25, 3], transform: transform([0, -0.5, 7]) },
+  { id: 'employment-platform', kind: 'platform', size: [3, 0.25, 3], transform: transform([-7, -0.5, 0]) },
+  { id: 'writing-platform', kind: 'platform', size: [3, 0.25, 3], transform: transform([0, 0.5, -8]) },
+  { id: 'projects-platform', kind: 'platform', size: [3, 0.25, 3], transform: transform([8, 0.5, 0]) },
+  { id: 'interests-platform', kind: 'platform', size: [3, 0.25, 3], transform: transform([0, -0.5, 7]) },
   { id: 'about-platform', kind: 'platform', size: [3, 0.25, 3], transform: transform([7, 1, 8]) },
-  { id: 'work-bridge', kind: 'bridge', size: [3, 0.25, 1], transform: transform([-4, -0.5, 0]), bridgeNodeIds: ['work-03', 'work-06'] },
-  { id: 'experiments-bridge', kind: 'bridge', size: [3, 0.25, 1], transform: transform([5, 0.5, 0]), bridgeNodeIds: ['experiments-03', 'experiments-06'] },
-  { id: 'hobbies-bridge', kind: 'bridge', size: [1, 0.25, 3], transform: transform([0, -0.5, 4]), bridgeNodeIds: ['hobbies-03', 'hobbies-06'] },
-  { id: 'work-stair', kind: 'stair', size: [1, 0.75, 1], transform: transform([-3, 0, 0]), stairNodeIds: ['work-02', 'work-03'] },
-  { id: 'hobbies-stair', kind: 'stair', size: [1, 0.75, 1], transform: transform([0, 0, 3]), stairNodeIds: ['hobbies-02', 'hobbies-03'] },
-  { id: 'experiments-stair', kind: 'stair', size: [1, 0.75, 1], transform: transform([3, 0, 0]), stairNodeIds: ['experiments-02', 'experiments-03'] },
-  { id: 'notes-stair', kind: 'stair', size: [1, 0.75, 1], transform: transform([0, 0, -3]), stairNodeIds: ['notes-02', 'notes-03'] },
-  { id: 'notes-bridge', kind: 'bridge', size: [1, 0.25, 3], transform: transform([0, 0.5, -5]), bridgeNodeIds: ['notes-03', 'notes-06'] },
+  { id: 'employment-bridge', kind: 'bridge', size: [3, 0.25, 1], transform: transform([-4, -0.5, 0]), bridgeNodeIds: ['employment-03', 'employment-06'] },
+  { id: 'projects-bridge', kind: 'bridge', size: [3, 0.25, 1], transform: transform([5, 0.5, 0]), bridgeNodeIds: ['projects-03', 'projects-06'] },
+  { id: 'interests-bridge', kind: 'bridge', size: [1, 0.25, 3], transform: transform([0, -0.5, 4]), bridgeNodeIds: ['interests-03', 'interests-06'] },
+  { id: 'employment-stair', kind: 'stair', size: [1, 0.75, 1], transform: transform([-3, 0, 0]), stairNodeIds: ['employment-02', 'employment-03'] },
+  { id: 'interests-stair', kind: 'stair', size: [1, 0.75, 1], transform: transform([0, 0, 3]), stairNodeIds: ['interests-02', 'interests-03'] },
+  { id: 'projects-stair', kind: 'stair', size: [1, 0.75, 1], transform: transform([3, 0, 0]), stairNodeIds: ['projects-02', 'projects-03'] },
+  { id: 'writing-stair', kind: 'stair', size: [1, 0.75, 1], transform: transform([0, 0, -3]), stairNodeIds: ['writing-02', 'writing-03'] },
+  { id: 'writing-bridge', kind: 'bridge', size: [1, 0.25, 3], transform: transform([0, 0.5, -5]), bridgeNodeIds: ['writing-03', 'writing-06'] },
   { id: 'about-stair', kind: 'stair', size: [1, 0.75, 1], transform: transform([8, 0.5, 2]), stairNodeIds: ['about-01', 'about-02'] },
   { id: 'about-bridge', kind: 'bridge', size: [1, 0.25, 3], transform: transform([8, 1, 4]), bridgeNodeIds: ['about-02', 'about-05'] },
   { id: 'about-landing', kind: 'bridge', size: [1, 0.25, 1], transform: transform([8, 1, 6]), bridgeNodeIds: ['about-05', 'about-06'] },
-  { id: 'work-tower', kind: 'tower', size: [1, 2.5, 1], transform: transform([-7, 0, 0], 1) },
-  { id: 'notes-tower', kind: 'tower', size: [1, 4.5, 1], transform: transform([0, 1, -8], 0, -3 * Math.PI / 4) },
+  { id: 'employment-tower', kind: 'tower', size: [1, 2.5, 1], transform: transform([-7, 0, 0], 1) },
+  { id: 'writing-tower', kind: 'tower', size: [1, 4.5, 1], transform: transform([0, 1, -8], 0, -3 * Math.PI / 4) },
   { id: 'about-tower', kind: 'tower', size: [1, 3.5, 1], transform: transform([7, 1.5, 8]) },
-  { id: 'experiments-tower', kind: 'tower', size: [1, 3.5, 1], transform: transform([8, 1, -1]) },
+  { id: 'projects-tower', kind: 'tower', size: [1, 3.5, 1], transform: transform([8, 1, -1]) },
   { id: 'central-ruin', kind: 'ruin', size: [1, 1, 1], transform: transform([-2, 0.5, -1]) },
   { id: 'about-ruin', kind: 'ruin', size: [1, 1, 1], transform: transform([6, 1, 8]) },
 ];
@@ -71,40 +71,40 @@ function defineBranch(prefix: string, points: readonly GridPoint[], surfaceIds: 
 }
 
 defineBranch(
-  'work',
+  'employment',
   [[-1, 0, 0], [-2, 0, 0], [-3, -0.5, 0], [-4, -0.5, 0], [-5, -0.5, 0], [-6, -0.5, 0], [-7, -0.5, 0]],
-  ['central-platform', 'central-platform', 'work-stair', 'work-bridge', 'work-bridge', 'work-platform', 'work-platform'],
-  'work',
+  ['central-platform', 'central-platform', 'employment-stair', 'employment-bridge', 'employment-bridge', 'employment-platform', 'employment-platform'],
+  'employment',
 );
 defineBranch(
-  'notes',
+  'writing',
   [[0, 0, -1], [0, 0, -2], [0, 0.5, -3], [0, 0.5, -4], [0, 0.5, -5], [0, 0.5, -6], [0, 0.5, -7], [1, 0.5, -7]],
-  ['central-platform', 'central-platform', 'notes-stair', 'notes-bridge', 'notes-bridge', 'notes-bridge', 'notes-platform'],
-  'field-notes',
+  ['central-platform', 'central-platform', 'writing-stair', 'writing-bridge', 'writing-bridge', 'writing-bridge', 'writing-platform'],
+  'writing',
 );
-const experimentsZone = defineBranch(
-  'experiments',
+const projectsZone = defineBranch(
+  'projects',
   [[1, 0, 0], [2, 0, 0], [3, 0.5, 0], [4, 0.5, 0], [5, 0.5, 0], [6, 0.5, 0], [7, 0.5, 0], [8, 0.5, 0]],
-  ['central-platform', 'central-platform', 'experiments-stair', 'experiments-bridge', 'experiments-bridge', 'experiments-bridge', 'experiments-platform', 'experiments-platform'],
-  'experiments',
+  ['central-platform', 'central-platform', 'projects-stair', 'projects-bridge', 'projects-bridge', 'projects-bridge', 'projects-platform', 'projects-platform'],
+  'projects',
 );
 // Rounds the platform to its east tile: the centred carousel keeps the middle, and the
 // traveler still parks on the camera-facing side rather than behind the canopy.
 defineBranch(
-  'hobbies',
+  'interests',
   [[0, 0, 1], [0, 0, 2], [0, -0.5, 3], [0, -0.5, 4], [0, -0.5, 5], [0, -0.5, 6], [1, -0.5, 6], [1, -0.5, 7]],
-  ['central-platform', 'central-platform', 'hobbies-stair', 'hobbies-bridge', 'hobbies-bridge', 'hobbies-platform'],
-  'hobbies',
+  ['central-platform', 'central-platform', 'interests-stair', 'interests-bridge', 'interests-bridge', 'interests-platform'],
+  'interests',
 );
 
 const aboutPoints: readonly GridPoint[] = [
   [8, 0.5, 1], [8, 1, 2], [8, 1, 3], [8, 1, 4],
   [8, 1, 5], [8, 1, 6], [8, 1, 7], [8, 1, 8],
 ];
-let aboutPrevious = experimentsZone;
+let aboutPrevious = projectsZone;
 aboutPoints.forEach((point, index) => {
   const id = index === aboutPoints.length - 1 ? 'about-zone' : `about-${String(index + 1).padStart(2, '0')}`;
-  const surfaceId = index === 0 ? 'experiments-platform' : index === 1 ? 'about-stair' : index <= 4 ? 'about-bridge' : index === 5 ? 'about-landing' : 'about-platform';
+  const surfaceId = index === 0 ? 'projects-platform' : index === 1 ? 'about-stair' : index <= 4 ? 'about-bridge' : index === 5 ? 'about-landing' : 'about-platform';
   defineNode(id, point, surfaceId, index === aboutPoints.length - 1 ? 'about' : undefined);
   connect(aboutPrevious, id);
   aboutPrevious = id;
@@ -130,18 +130,18 @@ const nodes: WalkNode[] = [...nodeDefinitions.values()].map((node) => {
 });
 
 export const ZONE_NODES: Record<ZoneId, string> = {
-  work: 'work-zone',
-  'field-notes': 'notes-zone',
-  experiments: 'experiments-zone',
-  hobbies: 'hobbies-zone',
+  employment: 'employment-zone',
+  writing: 'writing-zone',
+  projects: 'projects-zone',
+  interests: 'interests-zone',
   about: 'about-zone',
 };
 
 export const WORLD_REACTIONS: readonly WorldReaction[] = [
-  { zone: 'work', kind: 'bridge-sweep', moduleIds: ['work-bridge', 'work-tower'], durationMs: 1_050 },
-  { zone: 'field-notes', kind: 'index-sequence', moduleIds: ['notes-tower'], durationMs: 1_400 },
-  { zone: 'experiments', kind: 'gate-slot', moduleIds: ['experiments-platform', 'experiments-tower'], durationMs: 1_050 },
-  { zone: 'hobbies', kind: 'carousel-spin', moduleIds: ['hobbies-carousel'], durationMs: 620 },
+  { zone: 'employment', kind: 'bridge-sweep', moduleIds: ['employment-bridge', 'employment-tower'], durationMs: 1_050 },
+  { zone: 'writing', kind: 'index-sequence', moduleIds: ['writing-tower'], durationMs: 1_400 },
+  { zone: 'projects', kind: 'gate-slot', moduleIds: ['projects-platform', 'projects-tower'], durationMs: 1_050 },
+  { zone: 'interests', kind: 'carousel-spin', moduleIds: ['interests-carousel'], durationMs: 620 },
   { zone: 'about', kind: 'lantern-rings', moduleIds: ['about-tower'], durationMs: 1_050 },
 ];
 

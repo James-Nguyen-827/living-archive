@@ -98,8 +98,8 @@ function assemblyBoxes(assembly: TowerAssembly, parent: Matrix4): OBB[] {
 describe('Index Engine spatial safety', () => {
   it('keeps every sampled arrival and exit pose finite, bounded, label-clear, and collision-free', () => {
     const design = towerDesign('index-engine', 4.5);
-    const tower = WORLD_MAP.modules.find((module) => module.id === 'notes-tower')!;
-    const labelLocalY = zoneLabelAnchor('field-notes')[1]
+    const tower = WORLD_MAP.modules.find((module) => module.id === 'writing-tower')!;
+    const labelLocalY = zoneLabelAnchor('writing')[1]
       - tower.transform.position[1]
       + DECOR_GROUND_SNAP;
     const rackAndRail = design.staticParts.slice(4).map((part) => partObb(part));

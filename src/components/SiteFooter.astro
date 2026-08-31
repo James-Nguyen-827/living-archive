@@ -25,6 +25,12 @@ import { site } from '../config/site';
   }
 
   @media (max-width: 40rem) {
-    .site-footer a { overflow-wrap: anywhere; }
+    .site-footer a {
+      display: inline-flex;
+      align-items: center;
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+      overflow-wrap: anywhere;
+    }
   }
 </style>

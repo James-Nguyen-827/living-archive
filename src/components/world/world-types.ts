@@ -1,4 +1,6 @@
-export type ZoneId = 'work' | 'field-notes' | 'experiments' | 'hobbies' | 'about';
+import type { PortfolioTheme } from '../../config/theme';
+
+export type ZoneId = 'employment' | 'writing' | 'projects' | 'interests' | 'about';
 export type ContentStatus = 'complete' | 'in-progress' | 'maintained' | 'archived';
 export type GridPoint = readonly [x: number, y: number, z: number];
 export type QuarterTurn = 0 | 1 | 2 | 3;
@@ -68,7 +70,7 @@ export interface WorldReaction {
 }
 
 export interface WorldState {
-  theme: 'day' | 'night';
+  theme: PortfolioTheme;
   phase: ExperiencePhase;
   characterNodeId: string;
   path: readonly string[];

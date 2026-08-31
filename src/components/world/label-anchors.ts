@@ -10,15 +10,15 @@ import type { ZoneId } from './world-types';
 /** Uniform gap between each sculpture's authored top and its label anchor. */
 export const LABEL_CLEARANCE = 0.5;
 
-const HOBBIES_CAROUSEL_POSITION: [number, number, number] = [0, -0.25, 7];
-const HOBBIES_CAROUSEL_SCALE = 1.25;
+const INTERESTS_CAROUSEL_POSITION: [number, number, number] = [0, -0.25, 7];
+const INTERESTS_CAROUSEL_SCALE = 1.25;
 /** Local-space top of the carousel canopy rim above the group origin. */
-const HOBBIES_CAROUSEL_LOCAL_TOP = 1.52;
+const INTERESTS_CAROUSEL_LOCAL_TOP = 1.52;
 
-const ZONE_LABEL_MODULE: Record<Exclude<ZoneId, 'hobbies'>, string> = {
-  work: 'work-tower',
-  'field-notes': 'notes-tower',
-  experiments: 'experiments-tower',
+const ZONE_LABEL_MODULE: Record<Exclude<ZoneId, 'interests'>, string> = {
+  employment: 'employment-tower',
+  writing: 'writing-tower',
+  projects: 'projects-tower',
   about: 'about-tower',
 };
 
@@ -29,8 +29,8 @@ function towerPlacementY(moduleId: string): number {
 }
 
 export function sculptureTopY(zone: ZoneId): number {
-  if (zone === 'hobbies') {
-    return HOBBIES_CAROUSEL_POSITION[1] + HOBBIES_CAROUSEL_LOCAL_TOP * HOBBIES_CAROUSEL_SCALE;
+  if (zone === 'interests') {
+    return INTERESTS_CAROUSEL_POSITION[1] + INTERESTS_CAROUSEL_LOCAL_TOP * INTERESTS_CAROUSEL_SCALE;
   }
   const moduleId = ZONE_LABEL_MODULE[zone];
   const module = WORLD_MAP.modules.find((item) => item.id === moduleId)!;
@@ -39,11 +39,11 @@ export function sculptureTopY(zone: ZoneId): number {
 }
 
 export function zoneLabelAnchor(zone: ZoneId): [number, number, number] {
-  if (zone === 'hobbies') {
+  if (zone === 'interests') {
     return [
-      HOBBIES_CAROUSEL_POSITION[0],
+      INTERESTS_CAROUSEL_POSITION[0],
       sculptureTopY(zone) + LABEL_CLEARANCE,
-      HOBBIES_CAROUSEL_POSITION[2],
+      INTERESTS_CAROUSEL_POSITION[2],
     ];
   }
   const moduleId = ZONE_LABEL_MODULE[zone];

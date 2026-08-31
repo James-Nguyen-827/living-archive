@@ -7,7 +7,28 @@ export interface ProjectedLabel {
   height: number;
 }
 
-export interface LabelViewport { width: number; height: number; padding: number }
+export interface LabelViewport {
+  width: number;
+  height: number;
+  padding: number;
+  bottomOcclusion?: number;
+}
+
+interface LayoutBounds {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export function bottomOcclusionHeight(viewport: LayoutBounds, occluder: LayoutBounds | null): number {
+  if (!occluder) return 0;
+  const coversWidth = occluder.left <= viewport.left + 1 && occluder.right >= viewport.right - 1;
+  const reachesBottom = occluder.bottom >= viewport.bottom - 1;
+  if (!coversWidth || !reachesBottom) return 0;
+  const occlusionTop = Math.min(viewport.bottom, Math.max(viewport.top, occluder.top));
+  return viewport.bottom - occlusionTop;
+}
 
 function intersects(first: ProjectedLabel, second: ProjectedLabel): boolean {
   return Math.abs(first.x - second.x) < (first.width + second.width) / 2 + 8
@@ -17,11 +38,12 @@ function intersects(first: ProjectedLabel, second: ProjectedLabel): boolean {
 export function resolveLabelLayout(labels: readonly ProjectedLabel[], viewport: LabelViewport): ProjectedLabel[] {
   const ordered = [...labels].sort((a, b) => a.depth - b.depth || a.id.localeCompare(b.id));
   const placed: ProjectedLabel[] = [];
+  const usableHeight = Math.max(0, viewport.height - Math.max(0, viewport.bottomOcclusion ?? 0));
   for (const source of ordered) {
     const minX = viewport.padding + source.width / 2;
     const maxX = viewport.width - viewport.padding - source.width / 2;
     const minY = viewport.padding + source.height;
-    const maxY = viewport.height - viewport.padding - source.height / 2;
+    const maxY = usableHeight - viewport.padding - source.height / 2;
     const anchorY = Math.min(maxY, Math.max(minY, source.y));
     const label = {
       ...source,

@@ -2,7 +2,7 @@ import type { CardinalDirection, GridPoint, WorldMap } from './world-types';
 
 export interface ValidationIssue { code: string; detail: string }
 const DIRECTIONS: readonly CardinalDirection[] = ['north', 'east', 'south', 'west'];
-const ZONES = ['work', 'field-notes', 'experiments', 'hobbies', 'about'] as const;
+const ZONES = ['employment', 'writing', 'projects', 'interests', 'about'] as const;
 
 const isGridPosition = (point: GridPoint) =>
   Number.isInteger(point[0]) && Number.isInteger(point[1] * 2) && Number.isInteger(point[2]);

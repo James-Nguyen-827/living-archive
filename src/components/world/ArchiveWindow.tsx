@@ -75,6 +75,7 @@ export function ArchiveWindow({ content, phase, zones, onClose, onSelectZone, on
                 ))}
               </ol>
             )}
+            {zone.entries.length === 0 && zone.emptyMessage && <p className="archive-window__empty">{zone.emptyMessage}</p>}
             <a className="archive-window__primary" href={zone.href}>{zone.label}</a>
           </>
         )}

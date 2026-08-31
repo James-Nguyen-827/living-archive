@@ -1,0 +1,99 @@
+---
+export type SectionKind = 'employment' | 'writing' | 'projects' | 'interests' | 'about' | 'utility';
+
+interface Props {
+  section: SectionKind;
+}
+
+const { section } = Astro.props;
+---
+
+<div class="section-mark" data-section={section} aria-hidden="true">
+  <svg viewBox="0 0 160 96" focusable="false">
+    {section === 'employment' && (
+      <>
+        <path class="section-mark__structure" d="M12 72V38h47v34M101 72V24h47v48" />
+        <path class="section-mark__accent" d="M49 31h62v9H49z" />
+        <path class="section-mark__line" d="M59 56h42M28 52h16M116 42h17" />
+      </>
+    )}
+    {section === 'writing' && (
+      <>
+        <path class="section-mark__structure" d="M24 75V54h26V38h27V21h27v17h31v37z" />
+        <path class="section-mark__line" d="M50 54h27v21M77 38h27v37M104 54h31M36 65h9M87 51h9M113 65h13" />
+        <path class="section-mark__accent" d="M98 15h12v11H98z" />
+      </>
+    )}
+    {section === 'projects' && (
+      <>
+        <path class="section-mark__structure" d="M22 76V20h116v56H22zm24-17h68V37H46v22z" />
+        <path class="section-mark__accent" d="M68 45h24v6H68z" />
+        <path class="section-mark__line" d="M31 29h18M111 67h18" />
+      </>
+    )}
+    {section === 'interests' && (
+      <>
+        <circle class="section-mark__structure" cx="80" cy="49" r="31" />
+        <circle class="section-mark__line" cx="80" cy="49" r="14" />
+        <path class="section-mark__line" d="M80 18v62M49 49h62M58 27l44 44M102 27L58 71" />
+        <path class="section-mark__accent" d="M73 39h14v20H73z" />
+      </>
+    )}
+    {section === 'about' && (
+      <>
+        <circle class="section-mark__structure" cx="80" cy="48" r="31" />
+        <ellipse class="section-mark__line" cx="80" cy="48" rx="48" ry="18" />
+        <ellipse class="section-mark__line" cx="80" cy="48" rx="18" ry="42" transform="rotate(38 80 48)" />
+        <circle class="section-mark__accent" cx="80" cy="48" r="7" />
+      </>
+    )}
+    {section === 'utility' && (
+      <>
+        <path class="section-mark__structure" d="M45 64 80 43l35 21-35 20-35-20z" />
+        <path class="section-mark__line" d="M45 64v-15l35-20 35 20v15M80 43v41" />
+        <path class="section-mark__accent" d="m73 25 7-13 7 13-7 4-7-4z" />
+      </>
+    )}
+  </svg>
+</div>
+
+<style>
+  .section-mark {
+    width: clamp(7rem, 13vw, 10rem);
+    color: var(--ink);
+  }
+
+  .section-mark svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .section-mark :global(path),
+  .section-mark :global(circle),
+  .section-mark :global(ellipse) {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .section-mark__structure,
+  .section-mark__line {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+
+  .section-mark__structure {
+    stroke-width: 2.5;
+  }
+
+  .section-mark__line {
+    opacity: 0.48;
+    stroke-width: 1.5;
+  }
+
+  .section-mark__accent {
+    fill: var(--coral);
+    stroke: none;
+  }
+</style>

@@ -1,23 +1,47 @@
 ---
+import SectionMark, { type SectionKind } from './SectionMark.astro';
+
 interface Props {
   title: string;
   description?: string;
+  section: SectionKind;
 }
 
-const { title, description } = Astro.props;
+const { title, description, section } = Astro.props;
 ---
 
 <header class="page-intro page-shell">
-  <h1>{title}</h1>
-  {description && <p class="page-intro__lead">{description}</p>}
-  <slot />
+  <div class="page-intro__copy">
+    <h1>{title}</h1>
+    {description && <p class="page-intro__lead">{description}</p>}
+    <slot />
+  </div>
+  <SectionMark section={section} />
 </header>
 
 <style>
+  .page-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2rem;
+    align-items: start;
+  }
+
   .page-intro__lead {
     max-width: var(--measure);
     margin: 1rem 0 0;
     color: var(--muted-ink);
     font-size: clamp(1.05rem, 1rem + 0.35vw, 1.25rem);
+  }
+
+  @media (max-width: 36rem) {
+    .page-intro {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+
+    .page-intro :global(.section-mark) {
+      grid-row: 1;
+    }
   }
 </style>

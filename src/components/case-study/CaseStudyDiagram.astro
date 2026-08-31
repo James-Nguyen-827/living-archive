@@ -1,0 +1,130 @@
+---
+interface Props {
+  variant: 'dual-path' | 'well-plate' | 'deploy-pipeline';
+}
+
+const { variant } = Astro.props;
+
+const diagrams = {
+  'well-plate': {
+    label: 'ColorCam experiment flow',
+    steps: ['Calibrate plate', 'Generate snake path', 'Capture each ROI', 'Measure RGB', 'Export CSV'],
+    caption: 'ColorCam turns a calibrated plate into a repeatable capture path, then preserves each measurement with its experiment output.',
+  },
+  'deploy-pipeline': {
+    label: 'NixOS build and deployment flow',
+    steps: ['Edit Nix modules', 'Run just build', 'Validate in CI', 'Deploy over SSH', 'Apply services'],
+    caption: 'Local and CI checks use the same system build before the committed configuration is applied remotely.',
+  },
+} as const;
+
+const diagram = variant === 'dual-path' ? null : diagrams[variant];
+---
+
+<figure class="case-study-diagram" data-variant={variant}>
+  {variant === 'dual-path' ? (
+    <div class="case-study-diagram__routes" aria-label="Two routes through the Living Archive converge on the same content">
+      <ol>
+        <li>Spatial world</li>
+        <li>Traveler and archive</li>
+        <li>Shared content</li>
+      </ol>
+      <ol>
+        <li>Direct routes</li>
+        <li>Semantic pages</li>
+        <li>Shared content</li>
+      </ol>
+    </div>
+  ) : (
+    <ol class="case-study-diagram__flow" aria-label={diagram!.label}>
+      {diagram!.steps.map((step) => <li>{step}</li>)}
+    </ol>
+  )}
+  <figcaption>
+    {variant === 'dual-path'
+      ? 'The spatial and conventional paths remain independent at the interface and converge on one accessible content archive.'
+      : diagram!.caption}
+  </figcaption>
+</figure>
+
+<style>
+  .case-study-diagram {
+    margin: 0 0 clamp(3rem, 7vw, 5rem);
+    padding: clamp(1.25rem, 4vw, 2.25rem);
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+
+  .case-study-diagram ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .case-study-diagram__flow,
+  .case-study-diagram__routes ol {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .case-study-diagram__routes {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .case-study-diagram__routes ol {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .case-study-diagram li {
+    position: relative;
+    display: grid;
+    min-height: 5.5rem;
+    padding: .8rem;
+    place-items: center;
+    border: 1px solid var(--line);
+    font: 600 clamp(.8rem, 1.5vw, 1rem)/1.15 var(--display);
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .case-study-diagram li + li {
+    border-left: 0;
+  }
+
+  .case-study-diagram li:last-child {
+    color: var(--background);
+    background: var(--olive);
+  }
+
+  .case-study-diagram[data-variant='well-plate'] li:nth-child(3),
+  .case-study-diagram[data-variant='dual-path'] li:nth-child(2) {
+    color: var(--background);
+    background: var(--coral);
+  }
+
+  .case-study-diagram figcaption {
+    max-width: 65ch;
+    margin-top: 1rem;
+    color: var(--muted-ink);
+    font-size: .92rem;
+  }
+
+  @media (max-width: 42rem) {
+    .case-study-diagram__flow,
+    .case-study-diagram__routes ol {
+      grid-template-columns: 1fr;
+    }
+
+    .case-study-diagram li {
+      min-height: 3.5rem;
+    }
+
+    .case-study-diagram li + li {
+      border-top: 0;
+      border-left: 1px solid var(--line);
+    }
+  }
+</style>

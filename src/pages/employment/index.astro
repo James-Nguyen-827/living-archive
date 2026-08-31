@@ -1,0 +1,19 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageIntro from '../../components/PageIntro.astro';
+import ContentIndex from '../../components/ContentIndex.astro';
+
+const entries = (await getCollection('employment')).sort((a, b) => a.data.order - b.data.order);
+const items = entries.map((entry) => ({
+  href: `/employment/${entry.id}`,
+  title: entry.data.title,
+  summary: entry.data.summary,
+  meta: `${entry.data.year} · ${entry.data.role}`,
+}));
+---
+
+<BaseLayout title="Employment" description="Selected professional work, including complete case studies and projects still in motion.">
+  <PageIntro section="employment" title="Employment" description="A look at the work I’ve done and the decisions behind it." />
+  <ContentIndex items={items} />
+</BaseLayout>

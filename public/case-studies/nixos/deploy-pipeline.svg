@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" role="img" aria-labelledby="title description">
+  <title id="title">NixOS deployment pipeline</title>
+  <desc id="description">Five connected stages show editing Nix modules, building locally, validating in continuous integration, deploying over SSH, and applying services.</desc>
+  <rect width="800" height="360" fill="#f3f2e9"/>
+  <g fill="none" stroke="#33372e" stroke-width="2">
+    <path d="M130 180h65m95 0h65m95 0h65m95 0h65"/>
+    <path d="m185 170 10 10-10 10m160-20 10 10-10 10m160-20 10 10-10 10m160-20 10 10-10 10"/>
+  </g>
+  <g stroke="#33372e" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter">
+    <g>
+      <rect x="30" y="125" width="100" height="110" fill="#ffffff"/>
+      <path d="m58 198 8-30 24-24 16 16-24 24-24 14zm8-30 16 16m8-40 16 16" fill="none"/>
+    </g>
+    <g>
+      <rect x="195" y="125" width="95" height="110" fill="#ffffff"/>
+      <path d="m218 171 24-14 24 14-24 14-24-14zm0 15 24 14 24-14m-48-30 24-14 24 14" fill="none"/>
+    </g>
+    <g>
+      <rect x="355" y="125" width="95" height="110" fill="#dd6845"/>
+      <path d="m377 181 15 15 34-38" fill="none" stroke="#ffffff" stroke-width="7"/>
+    </g>
+    <g>
+      <rect x="515" y="125" width="95" height="110" fill="#ffffff"/>
+      <path d="M536 159h52v43h-52zm10 13h32m-32 9h25m-25 9h18" fill="none"/>
+      <path d="m578 149 10 10-10 10" fill="none"/>
+    </g>
+    <g>
+      <rect x="675" y="125" width="95" height="110" fill="#59633a"/>
+      <path d="M696 154h52v52h-52zm0 17h52m-35-17v52m18-52v52" fill="none" stroke="#ffffff"/>
+      <circle cx="705" cy="163" r="3" fill="#dd6845" stroke="none"/>
+      <circle cx="722" cy="163" r="3" fill="#dd6845" stroke="none"/>
+      <circle cx="739" cy="163" r="3" fill="#dd6845" stroke="none"/>
+    </g>
+  </g>
+</svg>

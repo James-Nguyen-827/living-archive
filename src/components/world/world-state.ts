@@ -16,10 +16,10 @@ export type WorldAction =
   | { type: 'theme-changed'; theme: WorldState['theme'] };
 
 const ZONE_LABELS: Record<ZoneId, string> = {
-  work: 'Work',
-  'field-notes': 'Field Notes',
-  experiments: 'Experiments',
-  hobbies: 'Hobbies',
+  employment: 'Employment',
+  writing: 'Blogs',
+  projects: 'Projects',
+  interests: 'Interests',
   about: 'About',
 };
 

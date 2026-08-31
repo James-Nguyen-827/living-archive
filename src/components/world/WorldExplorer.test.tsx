@@ -4,10 +4,10 @@ import type { ZoneData } from './world-content';
 import { WorldExplorer } from './WorldExplorer';
 
 const zones: ZoneData[] = [
-  { id: 'work', label: 'Work', summary: 'Selected work.', href: '/work', entries: [{ title: 'Civic Signal', href: '/work/civic-signal', meta: '2026', summary: 'A public-service design system.' }] },
-  { id: 'field-notes', label: 'Field Notes', summary: 'Short notes.', href: '/notes', entries: [] },
-  { id: 'experiments', label: 'Experiments', summary: 'Small tests.', href: '/experiments', entries: [] },
-  { id: 'hobbies', label: 'Hobbies', summary: 'Ongoing practices.', href: '/hobbies', entries: [] },
+  { id: 'employment', label: 'Employment', summary: 'Selected work.', href: '/employment', entries: [{ title: 'Civic Signal', href: '/employment/civic-signal', meta: '2026', summary: 'A public-service design system.' }] },
+  { id: 'writing', label: 'Blogs', summary: 'Short notes.', href: '/writing', entries: [] },
+  { id: 'projects', label: 'Projects', summary: 'Small tests.', href: '/projects', entries: [] },
+  { id: 'interests', label: 'Interests', summary: 'Ongoing practices.', href: '/interests', entries: [] },
   { id: 'about', label: 'About', summary: 'About James.', href: '/about', entries: [] },
 ];
 
@@ -26,13 +26,13 @@ describe('WorldExplorer accessible shell', () => {
     expect(fallbackLinks).toHaveLength(5);
 
     fireEvent.click(fallbackLinks[0]);
-    expect(await screen.findByRole('heading', { name: 'Work' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Employment' })).toBeVisible();
     await waitFor(() => expect(document.querySelector('.archive-window')).toHaveFocus());
     const previewButton = screen.getByRole('button', { name: /Civic Signal/ });
     expect(previewButton).toBeVisible();
     fireEvent.click(previewButton);
-    expect(screen.getByRole('link', { name: 'Open' })).toHaveAttribute('href', '/work/civic-signal');
-    expect(window.location.search).toBe('?zone=work');
+    expect(screen.getByRole('link', { name: 'Open' })).toHaveAttribute('href', '/employment/civic-signal');
+    expect(window.location.search).toBe('?zone=employment');
     fireEvent.click(screen.getByRole('button', { name: 'Close archive window' }));
     await waitFor(() => expect(document.querySelector('.archive-window')).toBeNull());
     expect(fallbackLinks[0]).toHaveFocus();
@@ -71,15 +71,20 @@ describe('WorldExplorer accessible shell', () => {
     const { container } = render(<WorldExplorer zones={zones} />);
     const world = container.querySelector<HTMLElement>('.world-explorer')!;
     await screen.findByText(/WebGL2 is not supported/i);
+
+    const region = screen.getByRole('region', { name: 'Interactive portfolio world for James Nguyen' });
+    expect(region.tagName).toBe('DIV');
+    expect(region).toHaveAttribute('tabindex', '0');
+
     fireEvent.keyDown(world, { key: 'e' });
     expect(Number(world.dataset.angle)).toBeCloseTo(Math.PI / 8);
 
     fireEvent.click(screen.getByRole('button', { name: 'Open index' }));
     expect(await screen.findByRole('heading', { name: 'Index' })).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: /Work/ }));
-    expect(await screen.findByRole('heading', { name: 'Work' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Employment/ }));
+    expect(await screen.findByRole('heading', { name: 'Employment' })).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Close archive window' }));
     await waitFor(() => expect(document.querySelector('.archive-window')).toBeNull());
-    expect(container.querySelector('.world-zone-labels a[href="/work"]')).toHaveFocus();
+    expect(container.querySelector('.world-zone-labels a[href="/employment"]')).toHaveFocus();
   });
 });

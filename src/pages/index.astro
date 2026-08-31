@@ -5,12 +5,13 @@ import { WorldExplorer } from '../components/world/WorldExplorer';
 import type { ZoneData } from '../components/world/world-content';
 import { WORLD_MAP } from '../components/world/world-map';
 import { validateWorld } from '../components/world/world-validator';
-import { site } from '../config/site';
+import { BLOGS_EMPTY_MESSAGE, INTERESTS_EMPTY_MESSAGE, site } from '../config/site';
 
-const [work, notes, archive] = await Promise.all([
-  getCollection('work'),
-  getCollection('notes'),
-  getCollection('archive'),
+const [employment, writing, projects, interests] = await Promise.all([
+  getCollection('employment'),
+  getCollection('writing'),
+  getCollection('projects'),
+  getCollection('interests', ({ data }) => !data.draft),
 ]);
 
 const worldIssues = validateWorld(WORLD_MAP);
@@ -20,24 +21,33 @@ if (worldIssues.length > 0) {
 
 const zones: ZoneData[] = [
   {
-    id: 'work', label: 'Work', href: '/work',
+    id: 'employment', label: 'Employment', href: '/employment',
     summary: 'Selected professional systems, services, identities, and tools—with the decisions visible.',
-    entries: work.sort((a, b) => a.data.order - b.data.order).slice(0, 5).map((entry) => ({ title: entry.data.title, href: `/work/${entry.id}`, meta: `${entry.data.year} · ${entry.data.status}`, summary: entry.data.summary })),
+    entries: employment.sort((a, b) => a.data.order - b.data.order).slice(0, 5).map((entry) => ({ title: entry.data.title, href: `/employment/${entry.id}`, meta: `${entry.data.year} · ${entry.data.status}`, summary: entry.data.summary })),
   },
   {
-    id: 'field-notes', label: 'Field Notes', href: '/notes',
-    summary: 'Observations on design, architecture, interfaces, and the practice around them.',
-    entries: notes.sort((a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf()).slice(0, 4).map((entry) => ({ title: entry.data.title, href: `/notes/${entry.id}`, meta: new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short' }).format(entry.data.publishDate), summary: entry.data.summary })),
+    id: 'writing', label: 'Blogs', href: '/writing',
+    summary: 'A quiet shelf for future posts—currently between drafts.',
+    emptyMessage: BLOGS_EMPTY_MESSAGE,
+    entries: writing.sort((a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf()).slice(0, 4).map((entry) => ({ title: entry.data.title, href: `/writing/${entry.id}`, meta: new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short' }).format(entry.data.publishDate), summary: entry.data.summary })),
   },
   {
-    id: 'experiments', label: 'Experiments', href: '/experiments',
-    summary: 'Prototypes and small systems with permission to stay unresolved.',
-    entries: archive.filter((entry) => entry.data.kind === 'experiment').map((entry) => ({ title: entry.data.title, href: `/experiments/${entry.id}`, meta: `${entry.data.year} · ${entry.data.status}`, summary: entry.data.summary })),
+    id: 'projects', label: 'Projects', href: '/projects',
+    summary: 'Things built—finished work and projects still in motion.',
+    entries: projects.map((entry) => ({
+      title: entry.data.title,
+      href: `/projects/${entry.id}`,
+      meta: `${entry.data.year} · ${entry.data.status}`,
+      summary: entry.data.summary,
+      previewImage: entry.data.previewImage,
+      previewAlt: entry.data.previewAlt,
+    })),
   },
   {
-    id: 'hobbies', label: 'Hobbies', href: '/hobbies',
+    id: 'interests', label: 'Interests', href: '/interests',
     summary: 'Things I return to without needing them to become work.',
-    entries: archive.filter((entry) => entry.data.kind === 'hobby').map((entry) => ({ title: entry.data.title, href: `/hobbies/${entry.id}`, meta: `${entry.data.year} · ${entry.data.status}`, summary: entry.data.summary })),
+    emptyMessage: INTERESTS_EMPTY_MESSAGE,
+    entries: interests.map((entry) => ({ title: entry.data.title, href: `/interests/${entry.id}`, meta: `${entry.data.year} · ${entry.data.status}`, summary: entry.data.summary })),
   },
   {
     id: 'about', label: 'About', href: '/about',
@@ -50,20 +60,16 @@ const personSchema = {
   '@context': 'https://schema.org',
   '@type': 'Person',
   name: site.owner,
-  url: site.url,
+  ...(site.url ? { url: site.url } : {}),
   email: `mailto:${site.email}`,
   sameAs: site.profiles.map((profile) => profile.href),
 };
 ---
 
 <BaseLayout>
+  <h1 class="visually-hidden">{site.name}</h1>
   <div class="home-world">
-    <h1 class="visually-hidden">Living Archive</h1>
     <WorldExplorer zones={zones} client:load />
   </div>
   <script is:inline type="application/ld+json" set:html={JSON.stringify(personSchema)} />
 </BaseLayout>
-
-<style>
-  .home-world { position: relative; }
-</style>

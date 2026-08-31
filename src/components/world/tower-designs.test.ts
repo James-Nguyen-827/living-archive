@@ -9,9 +9,9 @@ import {
 } from './tower-designs';
 
 const CASES: readonly [string, TowerArchetype, number][] = [
-  ['work-tower', 'project-court', 2.5],
-  ['notes-tower', 'index-engine', 4.5],
-  ['experiments-tower', 'paradox-gate', 3.5],
+  ['employment-tower', 'project-court', 2.5],
+  ['writing-tower', 'index-engine', 4.5],
+  ['projects-tower', 'paradox-gate', 3.5],
   ['about-tower', 'orrery', 3.5],
 ];
 
@@ -76,7 +76,7 @@ describe('narrative tower designs', () => {
     expect(budget.triangles).toBe(324);
   });
 
-  it('builds the Field Notes Index Engine from six instanced C-shaped pieces and one coral carriage', () => {
+  it('builds the Writing Index Engine from six instanced C-shaped pieces and one coral carriage', () => {
     const design = towerDesign('index-engine', 4.5);
     const keyedPieces = [
       'chamber-0',

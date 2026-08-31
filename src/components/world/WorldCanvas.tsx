@@ -1,10 +1,11 @@
 import { Canvas } from '@react-three/fiber';
+import type { PortfolioTheme } from '../../config/theme';
 import { WorldScene, type LabelProjectionHandler } from './WorldScene';
 import type { ExperiencePhase, ZoneId } from './world-types';
 
 interface Props {
   rotationAngle: number;
-  theme: 'day' | 'night';
+  theme: PortfolioTheme;
   phase: ExperiencePhase;
   characterNodeId: string;
   path: readonly string[];

@@ -14,7 +14,7 @@ Hiring managers, collaborators, and curious peers who want to understand James's
 
 ## Product Purpose
 
-Present a multidisciplinary body of work as a living archive. Visitors freely orbit a responsive habitat, choose an island, and watch a geometric traveler navigate there automatically. The same professional projects, experiments, writing, hobbies, and personal context remain available through an immediate conventional index.
+Present James Nguyen's multidisciplinary body of work as an explorable personal portfolio. Visitors freely orbit a responsive habitat, choose an island, and watch a geometric traveler navigate there automatically. The same employment history, writing, projects, interests, and personal context remain available through an immediate conventional index.
 
 ## Brand Personality
 

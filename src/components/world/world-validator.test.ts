@@ -5,10 +5,10 @@ import { validateWorld } from './world-validator';
 const GUARDS: readonly CardinalDirection[] = ['north', 'east', 'south', 'west'];
 
 function makeValidWorld(): WorldMap & { modules: WorldModule[]; nodes: WalkNode[] } {
-  const zones: readonly ZoneId[] = ['work', 'field-notes', 'experiments', 'hobbies', 'about'];
+  const zones: readonly ZoneId[] = ['employment', 'writing', 'projects', 'interests', 'about'];
   const positions: Record<ZoneId, WalkNode['position']> = {
-    work: [1, 0, 0], 'field-notes': [-1, 0, 0], experiments: [0, 0, 1],
-    hobbies: [0, 0, -1], about: [2, 0, 0],
+    employment: [1, 0, 0], writing: [-1, 0, 0], projects: [0, 0, 1],
+    interests: [0, 0, -1], about: [2, 0, 0],
   };
   const center: WalkNode = {
     id: 'spawn', position: [0, 0, 0], surfaceId: 'base',
@@ -16,7 +16,7 @@ function makeValidWorld(): WorldMap & { modules: WorldModule[]; nodes: WalkNode[
   };
   const nodes = zones.map<WalkNode>((zone) => ({
     id: `zone-${zone}`, position: positions[zone], surfaceId: 'base', zone,
-    neighbors: zone === 'about' ? ['zone-work'] : zone === 'work' ? ['spawn', 'zone-about'] : ['spawn'],
+    neighbors: zone === 'about' ? ['zone-employment'] : zone === 'employment' ? ['spawn', 'zone-about'] : ['spawn'],
     protectedEdges: GUARDS,
   }));
   return {

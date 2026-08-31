@@ -457,7 +457,7 @@ function ZonePlatform({ module, zone, theme, selected, reducedMotion, reactionSe
         onPointerOver={() => { setHovered(true); document.body.style.cursor = 'pointer'; }}
         onPointerOut={() => { setHovered(false); document.body.style.cursor = ''; }}
       />
-      {zone === 'experiments' && [-0.7, 0, 0.7].map((x, index) => (
+      {zone === 'projects' && [-0.7, 0, 0.7].map((x, index) => (
         <ReactionBlock key={x} x={x} index={index} active={selected} sequence={reactionSequence} reducedMotion={reducedMotion} theme={theme} />
       ))}
     </group>
@@ -1044,8 +1044,8 @@ export function WorldScene(props: Props) {
   });
 
   const zoneByPlatform: Partial<Record<string, ZoneId>> = {
-    'work-platform': 'work', 'notes-platform': 'field-notes', 'experiments-platform': 'experiments',
-    'hobbies-platform': 'hobbies', 'about-platform': 'about',
+    'employment-platform': 'employment', 'writing-platform': 'writing', 'projects-platform': 'projects',
+    'interests-platform': 'interests', 'about-platform': 'about',
   };
 
   return (
@@ -1068,9 +1068,9 @@ export function WorldScene(props: Props) {
                 module={module}
                 theme={props.theme}
                 active={
-                  (module.id === 'work-tower' && activeZone === 'work')
-                  || (module.id === 'notes-tower' && activeZone === 'field-notes')
-                  || (module.id === 'experiments-tower' && activeZone === 'experiments')
+                  (module.id === 'employment-tower' && activeZone === 'employment')
+                  || (module.id === 'writing-tower' && activeZone === 'writing')
+                  || (module.id === 'projects-tower' && activeZone === 'projects')
                   || (module.id === 'about-tower' && activeZone === 'about')
                 }
                 reducedMotion={props.reducedMotion}
@@ -1091,11 +1091,11 @@ export function WorldScene(props: Props) {
           return <StaticBox key={module.id} module={module} tone="structure" theme={props.theme} />;
         })}
         <HobbiesCarousel
-          active={activeZone === 'hobbies'}
+          active={activeZone === 'interests'}
           sequence={props.reactionSequence}
           theme={props.theme}
           reducedMotion={props.reducedMotion}
-          onSelect={() => props.onZoneRequest('hobbies')}
+          onSelect={() => props.onZoneRequest('interests')}
         />
         <Vegetation theme={props.theme} reducedMotion={props.reducedMotion} />
         <RuinAccents theme={props.theme} />

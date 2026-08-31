@@ -1,4 +1,4 @@
-# Living Archive
+# James Nguyen
 
 An Astro portfolio with an optional React Three Fiber world. Visitors can freely orbit one connected low-poly habitat, select an island, and watch a geometric traveler find its route. The complete archive remains available through conventional static routes before the world loads.
 
@@ -34,15 +34,17 @@ npm run capture:poster
 
 ## Content and identity
 
-- Edit identity, email, canonical URL, and profile links in `src/config/site.ts`.
-- Add professional case studies to `src/content/work/`.
-- Add dated writing to `src/content/notes/`.
-- Add hobbies and experiments to `src/content/archive/` with the appropriate `kind`.
+- The public email, GitHub profile, and LinkedIn profile have committed defaults in `src/config/site.ts`; environment variables can still override them.
+- Set `PUBLIC_SITE_URL` only when a real canonical domain exists. Local builds intentionally omit canonical, absolute social-image, sitemap, and structured URL metadata.
+- Add professional case studies to `src/content/employment/`.
+- Add dated writing to `src/content/writing/`.
+- Add projects to `src/content/projects/`; the optional typed `caseStudy` block enables the reusable overview, evidence, diagram, and next-project treatment.
+- Add interests to `src/content/interests/`. Entries marked `draft: true` are preserved locally but excluded from routes, indexes, the world archive, and production output.
 - The schemas in `src/content.config.ts` fail the build when required metadata is missing or invalid.
 
-Publishing should wait until the placeholder email, profile URLs, résumé details, canonical domain, and launch content are replaced.
+Publishing remains blocked until a canonical domain is supplied.
 
-Set `PUBLIC_SITE_URL`, `PUBLIC_EMAIL`, `PUBLIC_GITHUB_URL`, and `PUBLIC_LINKEDIN_URL`, then run `npm run validate:release` before deployment. Astro, canonical metadata, JSON-LD, RSS, and the sitemap all read the same public site URL.
+Set `PUBLIC_SITE_URL`, then run `npm run validate:release` before deployment. Astro, canonical metadata, JSON-LD, RSS, and the sitemap all read the same public site URL. `PUBLIC_EMAIL`, `PUBLIC_GITHUB_URL`, and `PUBLIC_LINKEDIN_URL` remain optional overrides.
 
 ## World rules
 
