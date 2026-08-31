@@ -264,16 +264,16 @@ test.describe('James Nguyen portfolio world', () => {
     await expect(page.locator('.archive-window')).toHaveCount(0);
   });
 
-  test('index uses the shared window and browser history restores zones', async ({ page }) => {
+  test('browser history restores zones from the shared archive window', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Open index' }).click();
-    await expect(page.getByRole('heading', { name: 'Index' })).toBeVisible();
-    await expect(page.locator('.archive-window__zones li')).toHaveCount(5);
+    await page.locator('.world-zone-labels li[data-zone="projects"] a').click();
+    await expect(page.locator('.world-explorer')).toHaveAttribute('data-selected-zone', 'projects', { timeout: 8_000 });
     await page.goBack();
     await expect(page.locator('.archive-window')).toHaveCount(0);
     await page.goForward();
-    await expect(page.getByRole('heading', { name: 'Index' })).toBeVisible();
-    await page.locator('.archive-window__zones').getByRole('button', { name: /Employment/ }).click();
+    await expect(page.locator('.world-explorer')).toHaveAttribute('data-selected-zone', 'projects');
+    await expect(page.locator('.archive-window')).toBeVisible();
+    await page.locator('.world-zone-labels li[data-zone="employment"] a').click();
     await expect(page.locator('.world-explorer')).toHaveAttribute('data-selected-zone', 'employment', { timeout: 8_000 });
     await page.goBack();
     await expect(page.locator('.archive-window')).toHaveCount(0);
@@ -286,20 +286,19 @@ test.describe('James Nguyen portfolio world', () => {
     await expect(page.locator('.world-explorer')).toHaveAttribute('data-node', 'spawn', { timeout: 5_000 });
   });
 
-  test('data-saving visitors receive the complete static fallback', async ({ page }) => {
+  test('data-saving visitors receive the poster-only static fallback', async ({ page }) => {
     await page.addInitScript(() => {
       Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: true } });
     });
     await page.goto('/');
     await expect(page.getByTestId('world-fallback')).toBeVisible();
     await expect(page.getByText(/data saving is enabled/i)).toBeVisible();
-    const fallbackLinks = page.getByTestId('world-fallback').getByRole('link');
-    await expect(fallbackLinks).toHaveCount(5);
-    await fallbackLinks.first().click();
+    await expect(page.getByTestId('world-fallback').getByRole('link')).toHaveCount(0);
+
+    await page.goto('/?zone=employment');
     await expect(page.locator('.archive-window')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.locator('.archive-window')).toHaveCount(0);
-    await expect(fallbackLinks.first()).toBeFocused();
   });
 
   test('the conventional index is complete and usable without the world', async ({ page }) => {
@@ -308,7 +307,6 @@ test.describe('James Nguyen portfolio world', () => {
       await expect(page.getByRole('heading', { name: label, exact: true })).toBeVisible();
     }
     await expect(page.getByRole('link', { name: 'Bioengineering Lab Researcher' })).toHaveAttribute('href', '/employment/bioengineering-lab-researcher');
-    await expect(page.locator('.index-link')).toHaveText('Index');
   });
 
   test('conventional routes carry their landmark-derived section marks', async ({ page }, testInfo) => {
@@ -353,11 +351,12 @@ test.describe('James Nguyen portfolio world', () => {
     expect(titleBox!.x + titleBox!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
   });
 
-  test('the complete linked fallback works with JavaScript disabled', async ({ browser }, testInfo) => {
+  test('the poster-only fallback works with JavaScript disabled', async ({ browser }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-1440', 'The no-JavaScript path is viewport-independent.');
     const page = await browser.newPage({ javaScriptEnabled: false });
     await page.goto(`${testInfo.project.use.baseURL}/`);
-    await expect(page.getByTestId('world-fallback').getByRole('link')).toHaveCount(5);
+    await expect(page.getByTestId('world-fallback').getByRole('link')).toHaveCount(0);
+    await expect(page.locator('.site-header nav a')).toHaveCount(5);
     await expect(page.locator('.world-viewport canvas')).toHaveCount(0);
     await page.close();
   });
@@ -392,7 +391,6 @@ test('navigation, world, fallback, and archive actions expose full interaction t
   if (testInfo.project.name === 'mobile-360') {
     baseTargets.push(
       page.locator('.site-mark'),
-      page.locator('.index-link'),
       page.locator('.world-zone-labels li[data-zone="projects"] a'),
       page.locator('.site-footer a'),
     );
@@ -428,11 +426,11 @@ test('navigation, world, fallback, and archive actions expose full interaction t
     Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: true } });
   });
   await fallbackPage.goto('/');
-  const fallbackTarget = fallbackPage.getByTestId('world-fallback').getByRole('link').first();
-  const fallbackBox = await fallbackTarget.boundingBox();
-  expect(fallbackBox).not.toBeNull();
-  expect(fallbackBox!.width).toBeGreaterThanOrEqual(44);
-  expect(fallbackBox!.height).toBeGreaterThanOrEqual(44);
+  const themeToggle = fallbackPage.getByRole('button', { name: /Switch to (day|night) theme/i });
+  const themeBox = await themeToggle.boundingBox();
+  expect(themeBox).not.toBeNull();
+  expect(themeBox!.width).toBeGreaterThanOrEqual(44);
+  expect(themeBox!.height).toBeGreaterThanOrEqual(44);
   await fallbackPage.close();
 });
 
@@ -444,7 +442,7 @@ test('mobile projected labels stay above the archive sheet and restore when it c
   const labels = page.locator('.world-zone-labels li[data-projected="true"]');
   await expect(labels).toHaveCount(5);
 
-  await page.getByRole('button', { name: 'Open index' }).click();
+  await page.locator('.world-zone-labels li[data-zone="projects"] a').click();
   const archive = page.locator('.archive-window');
   await expect(archive).toHaveAttribute('data-phase', 'opening-window');
 

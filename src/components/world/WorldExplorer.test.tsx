@@ -19,13 +19,13 @@ describe('WorldExplorer accessible shell', () => {
 
   afterEach(cleanup);
 
-  it('keeps a complete linked fallback and opens an HTML zone panel', async () => {
+  it('keeps a poster-only fallback and restores a zone panel from the URL', async () => {
+    window.history.replaceState({ archive: { kind: 'zone', zone: 'employment' }, archiveDepth: 0 }, '', '/?zone=employment');
     const { container } = render(<WorldExplorer zones={zones} />);
     await screen.findByText(/WebGL2 is not supported/i);
-    const fallbackLinks = container.querySelectorAll('.world-fallback__index a');
-    expect(fallbackLinks).toHaveLength(5);
+    expect(container.querySelectorAll('.world-fallback__index a')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'Open index' })).toBeNull();
 
-    fireEvent.click(fallbackLinks[0]);
     expect(await screen.findByRole('heading', { name: 'Employment' })).toBeVisible();
     await waitFor(() => expect(document.querySelector('.archive-window')).toHaveFocus());
     const previewButton = screen.getByRole('button', { name: /Civic Signal/ });
@@ -35,7 +35,6 @@ describe('WorldExplorer accessible shell', () => {
     expect(window.location.search).toBe('?zone=employment');
     fireEvent.click(screen.getByRole('button', { name: 'Close archive window' }));
     await waitFor(() => expect(document.querySelector('.archive-window')).toBeNull());
-    expect(fallbackLinks[0]).toHaveFocus();
     await waitFor(() => expect(container.querySelector('.world-explorer')).toHaveAttribute('data-node', 'spawn'));
     expect(window.location.search).toBe('');
   });
@@ -67,7 +66,7 @@ describe('WorldExplorer accessible shell', () => {
     expect(world.dataset.node).toBe(originalNode);
   });
 
-  it('nudges by 22.5 degrees with Q/E and exposes the index window', async () => {
+  it('nudges by 22.5 degrees with Q/E in fallback mode', async () => {
     const { container } = render(<WorldExplorer zones={zones} />);
     const world = container.querySelector<HTMLElement>('.world-explorer')!;
     await screen.findByText(/WebGL2 is not supported/i);
@@ -78,13 +77,5 @@ describe('WorldExplorer accessible shell', () => {
 
     fireEvent.keyDown(world, { key: 'e' });
     expect(Number(world.dataset.angle)).toBeCloseTo(Math.PI / 8);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Open index' }));
-    expect(await screen.findByRole('heading', { name: 'Index' })).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: /Employment/ }));
-    expect(await screen.findByRole('heading', { name: 'Employment' })).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: 'Close archive window' }));
-    await waitFor(() => expect(document.querySelector('.archive-window')).toBeNull());
-    expect(container.querySelector('.world-zone-labels a[href="/employment"]')).toHaveFocus();
   });
 });

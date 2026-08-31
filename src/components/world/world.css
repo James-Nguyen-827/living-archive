@@ -54,29 +54,11 @@
   border: 1px solid var(--line);
   font-size: .82rem;
 }
-.world-fallback__index { position: absolute; inset: auto auto 5.6rem var(--page-gutter); margin: 0; padding: 0; list-style: none; }
-.world-fallback__index a,
-.world-fallback__index button {
-  display: grid;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
-  padding: .15rem .35rem;
-  place-items: center start;
-  color: var(--ink);
-  background: transparent;
-  border: 0;
-  font: 600 .78rem/1.3 var(--display);
-  letter-spacing: .08em;
-  text-decoration: none;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-.world-fallback__index span { display: none; }
 
 .world-zone-labels { position: absolute; inset: 0; z-index: 5; margin: 0; padding: 0; pointer-events: none; list-style: none; }
 .world-explorer[data-fallback='true'] .world-zone-labels { display: none; }
 .world-explorer[data-fallback='true'] .world-help,
-.world-explorer[data-fallback='true'] .world-controls > :not(.theme-toggle, .world-index-toggle) { display: none; }
+.world-explorer[data-fallback='true'] .world-controls > :not(.theme-toggle) { display: none; }
 .world-zone-labels li {
   --label-x: 50%;
   --label-y: 50%;
@@ -139,8 +121,7 @@
 .world-controls button { cursor: pointer; transition: color 160ms var(--ease-out-quint), background 160ms var(--ease-out-quint); }
 .world-controls button:hover { color: var(--background); background: var(--ink); }
 .world-controls__degree { display: none !important; }
-.world-controls .theme-toggle,
-.world-controls .world-index-toggle { border-left: 1px solid var(--line); }
+.world-controls .theme-toggle { border-left: 1px solid var(--line); }
 .world-help {
   position: absolute;
   bottom: 1.5rem;
@@ -221,10 +202,9 @@
     bottom: calc(4.35rem + env(safe-area-inset-bottom));
     max-width: calc(100% - 1.5rem);
   }
-  .world-controls > button:not(.theme-toggle):not(.world-index-toggle),
+  .world-controls > button:not(.theme-toggle),
   .world-controls__degree { display: none; }
   .world-controls button, .world-controls span { min-width: 2.75rem; min-height: 2.75rem; padding: .62rem .58rem; }
-  .world-fallback__index { bottom: .75rem; left: .75rem; }
   .world-fallback__reason { top: auto; right: .75rem; bottom: 7.25rem; left: .75rem; background: var(--surface); }
   .archive-window {
     display: flex;

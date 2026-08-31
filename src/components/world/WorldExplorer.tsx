@@ -69,7 +69,6 @@ export function WorldExplorer({ zones }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef(new Map<ZoneId, HTMLLIElement>());
   const lastProjectedLabels = useRef<readonly ProjectedLabel[]>([]);
-  const indexButtonRef = useRef<HTMLButtonElement>(null);
   const initiatingControl = useRef<HTMLElement | null>(null);
   const historyDepth = useRef(0);
   const zoneHistoryOnArrival = useRef<'push' | 'replace' | false>(false);
@@ -245,7 +244,7 @@ export function WorldExplorer({ zones }: Props) {
   function requestZone(zoneId: ZoneId, source?: HTMLElement | null) {
     const sourceInsideWindow = Boolean(source?.closest('.archive-window'));
     initiatingControl.current = sourceInsideWindow
-      ? labelRefs.current.get(zoneId)?.querySelector('a') ?? indexButtonRef.current ?? worldRef.current
+      ? labelRefs.current.get(zoneId)?.querySelector('a') ?? worldRef.current
       : source ?? (document.activeElement as HTMLElement | null);
     if (source && worldRef.current) {
       const origin = source.getBoundingClientRect();
@@ -273,12 +272,6 @@ export function WorldExplorer({ zones }: Props) {
     writeArchiveHistory(null, true);
     historyDepth.current = 0;
     dispatch({ type: 'window-close-requested' });
-  }
-
-  function openIndex(source?: HTMLElement | null) {
-    initiatingControl.current = source ?? (document.activeElement as HTMLElement | null);
-    dispatch({ type: 'index-requested' });
-    writeArchiveHistory({ kind: 'index' });
   }
 
   function openEntry(href: string) {
@@ -372,7 +365,7 @@ export function WorldExplorer({ zones }: Props) {
       <div ref={viewportRef} className="world-viewport">
         {mounted && !fallback ? (
           <CanvasBoundary onError={() => setFallback('the renderer stopped unexpectedly')}>
-            <Suspense fallback={<WorldFallback zones={zones} showIndex={false} />}>
+            <Suspense fallback={<WorldFallback />}>
               <LazyWorldCanvas
                 rotationAngle={rotationAngle}
                 theme={state.theme}
@@ -393,7 +386,7 @@ export function WorldExplorer({ zones }: Props) {
             </Suspense>
           </CanvasBoundary>
         ) : (
-          <WorldFallback zones={zones} reason={mounted ? fallback ?? undefined : undefined} onSelectZone={(id, source) => requestZone(id, source)} />
+          <WorldFallback reason={mounted ? fallback ?? undefined : undefined} />
         )}
 
         <ol className="world-zone-labels" aria-label="World zones">
@@ -419,7 +412,6 @@ export function WorldExplorer({ zones }: Props) {
         <div className="world-controls" aria-label="World controls">
           <button type="button" onClick={() => rotate(-1)} aria-label="Rotate world left 22.5 degrees">←</button>
           <button type="button" onClick={() => rotate(1)} aria-label="Rotate world right 22.5 degrees">→</button>
-          <button ref={indexButtonRef} type="button" className="world-index-toggle" onClick={(event) => openIndex(event.currentTarget)} aria-label="Open index">Index</button>
           <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${state.theme === 'day' ? 'night' : 'day'} theme`}>
             {state.theme === 'day' ? 'Night' : 'Day'}
           </button>

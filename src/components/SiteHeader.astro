@@ -14,7 +14,6 @@ const pathname = Astro.url.pathname;
       ))}
     </ul>
   </nav>
-  <a class="index-link" href="/index">Index</a>
 </header>
 
 <style>
@@ -22,7 +21,7 @@ const pathname = Astro.url.pathname;
     position: relative;
     z-index: 20;
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr;
     gap: 2rem;
     align-items: center;
     min-height: var(--header-height);
@@ -51,8 +50,12 @@ const pathname = Astro.url.pathname;
     list-style: none;
   }
 
-  nav a,
-  .index-link {
+  nav a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
     font-family: var(--display);
     font-size: 0.86rem;
     font-weight: 600;
@@ -61,28 +64,13 @@ const pathname = Astro.url.pathname;
     text-transform: uppercase;
   }
 
-  nav a {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-  }
-
-  .index-link {
-    display: inline-flex;
-    align-items: center;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-  }
-
   nav a[aria-current='page'] {
     color: var(--coral);
   }
 
   @media (max-width: 52rem) {
     .site-header {
-      grid-template-columns: 1fr auto;
+      grid-template-columns: auto;
     }
 
     .site-header nav {
