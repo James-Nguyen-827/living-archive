@@ -1,5 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
+import { PROJECTS_INTRO } from '../../config/site';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageIntro from '../../components/PageIntro.astro';
 import ContentIndex from '../../components/ContentIndex.astro';
@@ -14,7 +15,7 @@ const items = entries.map((entry) => ({
 ---
 
 <BaseLayout title="Projects" description="Things built—finished work and projects still in motion.">
-  <PageIntro section="projects" title="Projects" description="Things I’ve built, from finished projects to ideas I’m still figuring out." />
+  <PageIntro section="projects" title="Projects" description={PROJECTS_INTRO} />
   <ContentIndex items={items} />
   {entries.length === 0 && <p class="empty-state">Nothing here yet.</p>}
 </BaseLayout>

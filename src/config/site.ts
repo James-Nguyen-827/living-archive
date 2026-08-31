@@ -20,10 +20,22 @@ export const navigation = [
 ] as const;
 
 export const BLOGS_EMPTY_MESSAGE =
-  'The Field Notes archive has no published entries yet. The Index Engine is ready for the first note worth keeping.';
+  "The Blogs archive is empty for now. I'm still figuring out what I want to write about.";
 
 export const INTERESTS_EMPTY_MESSAGE =
-  'The Interests archive is being rebuilt from real notes, recordings, and sketches. It will reopen when the first artifacts are ready.';
+  'Still working on this—there are a lot of interests to catalog.';
+
+export const EMPLOYMENT_INTRO =
+  'A look at the work I’ve done and the decisions behind it.';
+
+export const BLOGS_INTRO =
+  'Notes, experiments, and small things worth writing down.';
+
+export const PROJECTS_INTRO =
+  'Things I’ve built, from finished projects to ideas I’m still figuring out.';
+
+export const INTERESTS_INTRO =
+  'Things I enjoy doing in my free time.';
 
 export const ABOUT_PARAGRAPHS = [
   'Hi, I’m James! I’m someone who likes building things and figuring out how stuff works. I especially enjoy projects that have some kind of physical aspect to them. There’s something really satisfying about writing code and then actually seeing it do something in the real world instead of it just living on a screen.',

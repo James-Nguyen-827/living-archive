@@ -102,7 +102,7 @@ test.describe('James Nguyen portfolio world', () => {
     await expect(page.getByRole('heading', { name: 'Blogs', exact: true })).toBeVisible();
     await expect(page.locator('.indexed-list li')).toHaveCount(0);
     await expect(page.getByText(
-      'The Field Notes archive has no published entries yet. The Index Engine is ready for the first note worth keeping.',
+      "The Blogs archive is empty for now. I'm still figuring out what I want to write about.",
       { exact: true },
     )).toBeVisible();
   });
@@ -114,7 +114,7 @@ test.describe('James Nguyen portfolio world', () => {
     await expect(page.getByRole('heading', { name: 'Blogs', exact: true })).toBeVisible();
     await expect(page.locator('.archive-window__entries li')).toHaveCount(0);
     await expect(page.locator('.archive-window__content').getByText(
-      'The Field Notes archive has no published entries yet. The Index Engine is ready for the first note worth keeping.',
+      "The Blogs archive is empty for now. I'm still figuring out what I want to write about.",
       { exact: true },
     )).toBeVisible();
   });
@@ -133,7 +133,7 @@ test.describe('James Nguyen portfolio world', () => {
     test.skip(testInfo.project.name !== 'desktop-1440', 'Draft filtering is viewport-independent.');
 
     const holdingMessage =
-      'The Interests archive is being rebuilt from real notes, recordings, and sketches. It will reopen when the first artifacts are ready.';
+      'Still working on this—there are a lot of interests to catalog.';
 
     await page.goto('/interests');
     await expect(page.locator('.indexed-list li')).toHaveCount(0);

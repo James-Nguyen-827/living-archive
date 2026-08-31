@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageIntro from '../../components/PageIntro.astro';
 import ContentIndex from '../../components/ContentIndex.astro';
-import { INTERESTS_EMPTY_MESSAGE } from '../../config/site';
+import { INTERESTS_EMPTY_MESSAGE, INTERESTS_INTRO } from '../../config/site';
 
 const entries = (await getCollection('interests', ({ data }) => !data.draft)).sort((a, b) => b.data.year - a.data.year);
 const items = entries.map((entry) => ({
@@ -15,7 +15,7 @@ const items = entries.map((entry) => ({
 ---
 
 <BaseLayout title="Interests" description="Things I return to without needing them to become work.">
-  <PageIntro section="interests" title="Interests" description="Things I enjoy doing in my free time." />
+  <PageIntro section="interests" title="Interests" description={INTERESTS_INTRO} />
   <ContentIndex items={items} />
   {entries.length === 0 && <p class="empty-state">{INTERESTS_EMPTY_MESSAGE}</p>}
 </BaseLayout>

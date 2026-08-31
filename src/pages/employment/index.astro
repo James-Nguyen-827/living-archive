@@ -1,5 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
+import { EMPLOYMENT_INTRO } from '../../config/site';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageIntro from '../../components/PageIntro.astro';
 import ContentIndex from '../../components/ContentIndex.astro';
@@ -14,6 +15,6 @@ const items = entries.map((entry) => ({
 ---
 
 <BaseLayout title="Employment" description="Selected professional work, including complete case studies and projects still in motion.">
-  <PageIntro section="employment" title="Employment" description="A look at the work I’ve done and the decisions behind it." />
+  <PageIntro section="employment" title="Employment" description={EMPLOYMENT_INTRO} />
   <ContentIndex items={items} />
 </BaseLayout>

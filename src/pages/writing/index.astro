@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageIntro from '../../components/PageIntro.astro';
 import ContentIndex from '../../components/ContentIndex.astro';
-import { BLOGS_EMPTY_MESSAGE } from '../../config/site';
+import { BLOGS_EMPTY_MESSAGE, BLOGS_INTRO } from '../../config/site';
 
 const posts = (await getCollection('writing')).sort(
   (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf(),
@@ -18,7 +18,7 @@ const items = posts.map((post) => ({
 ---
 
 <BaseLayout title="Blogs" description="Notes, experiments, and observations from work in progress.">
-  <PageIntro section="writing" title="Blogs" description="Notes, experiments, and small things worth writing down." />
+  <PageIntro section="writing" title="Blogs" description={BLOGS_INTRO} />
   {posts.length > 0 ? <ContentIndex items={items} /> : <p class="empty-state">{BLOGS_EMPTY_MESSAGE}</p>}
   <p class="note-rss page-shell"><a href="/rss.xml">RSS</a></p>
 </BaseLayout>

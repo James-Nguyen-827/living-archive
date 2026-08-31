@@ -5,7 +5,7 @@ import { WorldExplorer } from '../components/world/WorldExplorer';
 import type { ZoneData } from '../components/world/world-content';
 import { WORLD_MAP } from '../components/world/world-map';
 import { validateWorld } from '../components/world/world-validator';
-import { BLOGS_EMPTY_MESSAGE, INTERESTS_EMPTY_MESSAGE, ABOUT_SUMMARY, site } from '../config/site';
+import { BLOGS_EMPTY_MESSAGE, INTERESTS_EMPTY_MESSAGE, ABOUT_SUMMARY, BLOGS_INTRO, EMPLOYMENT_INTRO, INTERESTS_INTRO, PROJECTS_INTRO, site } from '../config/site';
 
 const [employment, writing, projects, interests] = await Promise.all([
   getCollection('employment'),
@@ -22,18 +22,18 @@ if (worldIssues.length > 0) {
 const zones: ZoneData[] = [
   {
     id: 'employment', label: 'Employment', href: '/employment',
-    summary: 'Selected professional systems, services, identities, and tools—with the decisions visible.',
+    summary: EMPLOYMENT_INTRO,
     entries: employment.sort((a, b) => a.data.order - b.data.order).slice(0, 5).map((entry) => ({ title: entry.data.title, href: `/employment/${entry.id}`, meta: `${entry.data.year} · ${entry.data.status}`, summary: entry.data.summary })),
   },
   {
     id: 'writing', label: 'Blogs', href: '/writing',
-    summary: 'A quiet shelf for future posts—currently between drafts.',
+    summary: BLOGS_INTRO,
     emptyMessage: BLOGS_EMPTY_MESSAGE,
     entries: writing.sort((a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf()).slice(0, 4).map((entry) => ({ title: entry.data.title, href: `/writing/${entry.id}`, meta: new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short' }).format(entry.data.publishDate), summary: entry.data.summary })),
   },
   {
     id: 'projects', label: 'Projects', href: '/projects',
-    summary: 'Things built—finished work and projects still in motion.',
+    summary: PROJECTS_INTRO,
     entries: projects.map((entry) => ({
       title: entry.data.title,
       href: `/projects/${entry.id}`,
@@ -45,7 +45,7 @@ const zones: ZoneData[] = [
   },
   {
     id: 'interests', label: 'Interests', href: '/interests',
-    summary: 'Things I return to without needing them to become work.',
+    summary: INTERESTS_INTRO,
     emptyMessage: INTERESTS_EMPTY_MESSAGE,
     entries: interests.map((entry) => ({ title: entry.data.title, href: `/interests/${entry.id}`, meta: `${entry.data.year} · ${entry.data.status}`, summary: entry.data.summary })),
   },
