@@ -392,7 +392,6 @@ test('navigation, world, fallback, and archive actions expose full interaction t
     baseTargets.push(
       page.locator('.site-mark'),
       page.locator('.world-zone-labels li[data-zone="projects"] a'),
-      page.locator('.site-footer a'),
     );
   }
 

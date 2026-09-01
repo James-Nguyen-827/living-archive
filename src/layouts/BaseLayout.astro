@@ -5,7 +5,6 @@ import '@fontsource/atkinson-hyperlegible-next/latin-500.css';
 import '@fontsource/atkinson-hyperlegible-next/latin-700.css';
 import '../styles/global.css';
 import SiteHeader from '../components/SiteHeader.astro';
-import SiteFooter from '../components/SiteFooter.astro';
 import { site } from '../config/site';
 import { THEME_COLORS, THEME_STORAGE_KEY } from '../config/theme';
 
@@ -56,6 +55,5 @@ const canonical = site.url ? new URL(Astro.url.pathname, site.url) : null;
     <a class="skip-link" href="#main-content">Skip to content</a>
     <SiteHeader />
     <main id="main-content"><slot /></main>
-    <SiteFooter />
   </body>
 </html>
